@@ -8,6 +8,7 @@ from app.api.v1.candidates.domain.exceptions import CandidateNotFoundError
 from app.api.v1.candidates.infrastructure.github_models_strategy import GitHubModelsStrategy
 from app.api.v1.candidates.infrastructure.unit_of_work import CandidateUnitOfWork
 from app.config import Settings
+from app.shared.summary_text import normalize_ai_summary
 
 
 class SummaryStrategy(Protocol):
@@ -63,7 +64,7 @@ class AiService:
         if candidate is None:
             raise CandidateNotFoundError(f"Candidate not found: {candidate_id}")
         context = self._build_context(candidate)
-        summary = await self._strategy.generate(context)
+        summary = normalize_ai_summary(await self._strategy.generate(context))
         updated = await self._uow.candidates.update_ai_summary(candidate_id, summary)
         if updated is None:
             raise CandidateNotFoundError(f"Candidate not found: {candidate_id}")
@@ -73,10 +74,20 @@ class AiService:
     def _build_context(self, candidate: CandidateAggregate) -> str:
         """Serialize candidate profile fields for the LLM prompt."""
         skills = ", ".join(candidate.skills)
-        return (
-            f"Name: {candidate.name}\n"
-            f"Email: {candidate.email}\n"
-            f"Role: {candidate.role_applied}\n"
-            f"Status: {candidate.status.value}\n"
-            f"Skills: {skills}"
-        )
+        lines = [
+            f"Name: {candidate.name}",
+            f"Email: {candidate.email}",
+            f"Role: {candidate.role_applied}",
+            f"Status: {candidate.status.value}",
+            f"Skills: {skills}",
+        ]
+        if candidate.description:
+            lines.append(f"Description: {candidate.description}")
+        if candidate.work_experience:
+            lines.append("Work Experience:")
+            for entry in candidate.work_experience:
+                period = f"{entry.start} – {entry.end or 'Present'}"
+                lines.append(f"- {entry.title} at {entry.company} ({period})")
+                if entry.summary:
+                    lines.append(f"  {entry.summary}")
+        return "\n".join(lines)

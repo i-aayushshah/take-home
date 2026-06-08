@@ -9,3 +9,7 @@ class CandidateNotFoundError(DomainError):
 
 class InvalidScoreError(DomainError):
     """Raised when a score value violates domain constraints."""
+
+
+class AISummaryError(DomainError):
+    """Raised when AI summary generation fails."""
