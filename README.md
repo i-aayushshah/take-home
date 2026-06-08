@@ -4,80 +4,70 @@ Internal candidate scoring and review dashboard for TechKraft's recruitment work
 
 ## Stack
 
-- **Backend:** FastAPI, SQLAlchemy 2.x (async), Alembic, PostgreSQL, Redis, uv
-- **Frontend:** React 18, Vite 5, Tailwind CSS, Zustand, TanStack Query
-- **Infra:** Docker Compose
+| Layer | Technologies |
+|---|---|
+| Backend | FastAPI, SQLAlchemy 2.x (async), Alembic, PostgreSQL, Redis, uv |
+| Frontend | React 18, Vite, Tailwind CSS v4, Zustand, TanStack Query |
+| Infra | Docker Compose |
+| AI | GitHub Models API (`models.github.ai`) |
 
-## How to Run Locally
-
-### Prerequisites
-
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (recommended), **or**
-- Python 3.11+, [uv](https://docs.astral.sh/uv/), Node.js 22+, PostgreSQL 16, Redis 7
-
-### Environment variables
-
-Database connection is built from individual `POSTGRES_*` variables (see `.env.example`):
-
-```env
-POSTGRES_DB=take-home
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=your_password
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-```
-
-- **Local backend** (no Docker): use `POSTGRES_HOST=localhost`
-- **Docker Compose**: `.env.example` uses `POSTGRES_HOST=db`; the backend service overrides host to `db` automatically
-
-### Option A — Docker Compose (recommended)
+## Quick start (Docker Compose)
 
 ```bash
-# 1. Copy environment file and set your password
 cp .env.example .env
-
-# 2. Start all services (postgres, redis, backend, frontend)
-docker-compose up --build
+# Edit POSTGRES_PASSWORD and other values as needed
+docker compose up --build
 ```
 
-| Service   | URL |
-|-----------|-----|
-| Backend API | http://localhost:8000 |
-| Frontend    | http://localhost:5173 |
-| Health check | http://localhost:8000/health |
-
-Run database migrations (after containers are up):
+In a second terminal, run migrations:
 
 ```bash
 docker compose exec backend uv run alembic upgrade head
 ```
 
+Optional seed (if the database is empty):
+
+```bash
+docker compose exec backend uv run python -m seed
+```
+
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:8000 |
+| Health check | http://localhost:8000/health |
+| PostgreSQL | localhost:5432 |
+| Redis | localhost:6379 |
+
+**Demo admin login:** `admin@techkraft.com` / `admin12345`
+
 Stop services:
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
-### Option B — Run backend & frontend without Docker
+## Local development (without full Docker)
 
-**1. Start PostgreSQL and Redis** (or use Docker for only those services):
+### 1. Start PostgreSQL and Redis
 
 ```bash
 docker compose up db redis -d
 ```
 
-**2. Backend**
+### 2. Backend
 
 ```bash
 cp .env.example .env
-# Set POSTGRES_HOST=localhost and your POSTGRES_PASSWORD in .env
+# Set POSTGRES_HOST=localhost and your POSTGRES_PASSWORD
 cd backend
 uv sync
 uv run alembic upgrade head
+uv run python -m seed
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-**3. Frontend** (new terminal)
+### 3. Frontend
 
 ```bash
 cd frontend
@@ -85,15 +75,128 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 — the Vite dev server proxies API calls to `VITE_API_URL` (default `http://localhost:8000` in `.env`).
+Open http://localhost:5173
 
-### Optional — GitHub AI summaries
+## Environment variables
 
-Add your GitHub token to `.env` for live AI summaries (Phase 03):
+Database connection is built from `POSTGRES_*` variables (see `.env.example`):
+
+```env
+POSTGRES_DB=take-home
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_password
+POSTGRES_HOST=localhost   # use "db" in Docker Compose
+POSTGRES_PORT=5432
+REDIS_URL=redis://localhost:6379/0
+SECRET_KEY=changeme
+```
+
+### GitHub token (AI summaries)
+
+1. Go to [GitHub Settings → Developer settings → Personal access tokens](https://github.com/settings/tokens)
+2. Create a token with **`models:read`** scope (fine-grained or classic)
+3. Add to `.env`:
 
 ```env
 GITHUB_TOKEN=ghp_your_token_here
+GITHUB_MODEL=openai/gpt-4o
 AI_SUMMARY_FALLBACK_MOCK=false
 ```
 
-Without a token, the API falls back to a mock summary generator.
+Without a token (or with `AI_SUMMARY_FALLBACK_MOCK=true`), the API uses a mock summary generator for local development.
+
+## API examples
+
+```bash
+# Register reviewer
+curl -X POST http://localhost:8000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"reviewer@techkraft.com","password":"secret12345"}'
+
+# Login
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@techkraft.com","password":"admin12345"}'
+
+# List candidates (replace TOKEN)
+curl "http://localhost:8000/api/v1/candidates?status=new&limit=20" \
+  -H "Authorization: Bearer TOKEN"
+
+# Candidate detail
+curl http://localhost:8000/api/v1/candidates/CANDIDATE_ID \
+  -H "Authorization: Bearer TOKEN"
+
+# Submit score
+curl -X POST http://localhost:8000/api/v1/candidates/CANDIDATE_ID/scores \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"category":"technical","score":4,"note":"Strong fundamentals"}'
+
+# Generate AI summary
+curl -X POST http://localhost:8000/api/v1/candidates/CANDIDATE_ID/summary \
+  -H "Authorization: Bearer TOKEN"
+```
+
+## Running tests
+
+Tests use in-memory SQLite and fakeredis — no PostgreSQL or Redis required.
+
+```bash
+cd backend
+uv sync --group dev
+uv run pytest
+```
+
+Coverage includes:
+
+- Candidate detail shape and role-filtered scores
+- Score submission persistence
+- SQL-level pagination totals (not Python-side filtering)
+- Registration always creates `reviewer` role
+- Login rate limiting (429)
+- Soft delete returns 404
+- AI summary text normalization
+
+## Architecture notes
+
+### SQL filtering fix (pagination `total`)
+
+**Problem:** A naive implementation loads all candidates into Python, filters in memory, and returns `len(filtered)` as `total`. That breaks pagination — `total` does not match the database, offsets skip rows incorrectly, and memory grows with table size.
+
+**Fix:** Compose `WHERE` clauses in SQLAlchemy (`status`, `role_applied`, `skill`, keyword on name/email), run a separate `COUNT(*)`, and apply `LIMIT`/`OFFSET` in the database. The list endpoint returns an accurate `total` for the active filter set.
+
+### Vertical-slice structure
+
+Each feature (auth, candidates) is organized as domain → application → infrastructure → presentation, with shared cross-cutting utilities in `app/shared/`.
+
+## Architecture decision records
+
+| # | Decision | Trade-off |
+|---|---|---|
+| 1 | PostgreSQL + vertical-slice DDD | More structure and testability vs. a flatter single-module layout |
+| 2 | GitHub Models API for AI summaries | Real async external inference vs. a pure mock (mock remains available via env flag) |
+| 3 | Zustand + TanStack Query | Auth in local persisted store; server state cached and invalidated via TanStack Query |
+| 4 | Glass morphism UI (Tailwind v4) | Distinctive polished UI vs. additional CSS/design effort |
+
+## Learning reflection
+
+This project was a good exercise in wiring a full-stack recruitment workflow end-to-end — especially integrating the GitHub Models inference API (migrating from the deprecated Azure endpoint to `models.github.ai`) and building a glass morphism UI with Tailwind v4 utility patterns and custom component classes.
+
+## Known limitations
+
+- SSE streaming for AI summaries not implemented (see optional stretch goals)
+- Rate limiter uses a fixed Redis window, not a sliding-window Lua script
+- Docker frontend runs the Vite dev server, not a production nginx static build
+- Skill filter uses JSON `contains` — behavior is PostgreSQL-specific
+
+## Assignment requirements checklist
+
+- [x] FastAPI backend with PostgreSQL and Redis
+- [x] Candidate list with filters and SQL-backed pagination
+- [x] Candidate detail with role-aware scores
+- [x] Score submission API
+- [x] AI summary generation (GitHub Models + mock fallback)
+- [x] Admin internal notes and soft delete
+- [x] React frontend with auth, list, and detail flows
+- [x] Docker Compose for local development
+- [x] pytest API tests
