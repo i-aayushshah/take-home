@@ -41,9 +41,17 @@ done
 echo "==> Running migrations..."
 docker compose -f "$COMPOSE_FILE" run --rm --no-deps backend uv run alembic upgrade head
 
-if [ "${RUN_SEED_ON_DEPLOY:-false}" = "true" ]; then
-  echo "==> Seeding database..."
+USER_COUNT=$(
+  docker compose -f "$COMPOSE_FILE" exec -T db \
+    psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-take-home}" -tAc \
+    "SELECT COUNT(*) FROM users;" 2>/dev/null | tr -d '[:space:]' || echo "0"
+)
+
+if [ "${RUN_SEED_ON_DEPLOY:-false}" = "true" ] || [ "$USER_COUNT" = "0" ]; then
+  echo "==> Seeding database (demo candidates + admin/reviewer accounts)..."
   docker compose -f "$COMPOSE_FILE" run --rm --no-deps backend uv run python -m seed
+else
+  echo "==> Skipping seed ($USER_COUNT users already in database)."
 fi
 
 echo "==> Starting all services..."
