@@ -20,6 +20,17 @@ class CandidateFilters:
 
 
 @dataclass(frozen=True)
+class WorkExperienceEntry:
+    """A single role in a candidate's employment history."""
+
+    company: str
+    title: str
+    start: str
+    end: str | None
+    summary: str | None = None
+
+
+@dataclass(frozen=True)
 class CandidateAggregate:
     """Domain representation of a candidate and related data."""
 
@@ -29,6 +40,8 @@ class CandidateAggregate:
     role_applied: str
     status: CandidateStatus
     skills: list[str]
+    description: str | None
+    work_experience: tuple[WorkExperienceEntry, ...]
     internal_notes: str | None
     ai_summary: str | None
     created_at: datetime

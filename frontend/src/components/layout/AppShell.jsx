@@ -2,88 +2,128 @@ import { useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import useAuthStore from "../../store/authStore";
 import Logo from "../brand/Logo";
+import AvatarInitials from "../ui/AvatarInitials";
 import GlassButton from "../ui/GlassButton";
 
 const navLinkClass = ({ isActive }) =>
-  `block rounded-xl px-4 py-3 text-sm font-semibold transition ${
+  `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${
     isActive
-      ? "bg-accent-primary/30 text-white border border-accent-primary/40"
-      : "text-white/70 hover:bg-white/10 hover:text-white"
+      ? "border border-accent-primary/40 bg-accent-primary/25 text-white shadow-lg shadow-accent-primary/10"
+      : "text-white/65 hover:border hover:border-white/10 hover:bg-white/8 hover:text-white"
   }`;
+
+function CandidatesIcon() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.8}
+        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+      />
+    </svg>
+  );
+}
 
 export default function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
   const isAdmin = user?.role === "admin";
+  const displayName = user?.email?.split("@")[0] || "User";
 
   return (
-    <div className="relative min-h-screen">
-      <div className="orb top-20 left-10 h-40 w-40 bg-accent-primary" />
-      <div className="orb orb-delayed bottom-20 right-10 h-52 w-52 bg-accent-glow" />
+    <div className="app-shell-bg relative min-h-screen">
+      <div className="orb top-16 left-6 h-44 w-44 bg-accent-primary opacity-25" />
+      <div className="orb orb-delayed bottom-16 right-6 h-56 w-56 bg-accent-glow opacity-20" />
 
       <div className="flex min-h-screen">
         <aside
-          className={`glass-panel fixed inset-y-0 left-0 z-40 w-72 transform p-4 transition-transform duration-300 lg:static lg:translate-x-0 ${
+          className={`glass-panel fixed inset-y-0 left-0 z-40 flex w-[min(18rem,88vw)] flex-col p-4 transition-transform duration-300 lg:static lg:translate-x-0 ${
             menuOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <div className="mb-8 px-2 pt-2">
-            <Link to="/candidates">
+          <div className="mb-8 px-1 pt-1">
+            <Link to="/candidates" onClick={() => setMenuOpen(false)}>
               <Logo size="sm" />
             </Link>
           </div>
+
           <nav className="space-y-2">
             <NavLink to="/candidates" className={navLinkClass} onClick={() => setMenuOpen(false)}>
+              <CandidatesIcon />
               Candidates
             </NavLink>
           </nav>
+
+          <div className="mt-auto rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+            <div className="flex items-center gap-3">
+              <AvatarInitials name={displayName} size="sm" />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-white">{displayName}</p>
+                <p className="truncate text-xs text-white/45">{user?.email}</p>
+              </div>
+            </div>
+            <span
+              className={`mt-3 inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
+                isAdmin
+                  ? "border border-accent-primary/40 bg-accent-primary/20 text-accent-glow"
+                  : "border border-white/10 bg-white/5 text-white/60"
+              }`}
+            >
+              {user?.role}
+            </span>
+          </div>
         </aside>
 
         {menuOpen && (
           <button
             type="button"
-            className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+            className="fixed inset-0 z-30 bg-black/50 backdrop-blur-[2px] lg:hidden"
             onClick={() => setMenuOpen(false)}
             aria-label="Close menu"
           />
         )}
 
-        <div className="flex min-h-screen flex-1 flex-col">
-          <header className="glass-panel sticky top-0 z-20 m-3 mb-0 flex items-center justify-between gap-4 rounded-2xl px-4 py-3 sm:px-6">
-            <div className="flex items-center gap-3">
+        <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+          <header className="mobile-topbar glass-panel sticky top-0 z-20 mx-2 mt-2 sm:mx-4 sm:mt-3">
+            <div className="flex h-14 items-center gap-3 px-3 sm:h-auto sm:px-5 sm:py-3">
               <button
                 type="button"
-                className="glass-button-ghost px-3 py-2 lg:hidden"
+                className="mobile-icon-btn lg:hidden"
                 onClick={() => setMenuOpen((open) => !open)}
                 aria-label="Toggle menu"
+                aria-expanded={menuOpen}
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
-              <div>
-                <p className="text-sm font-semibold text-white sm:text-base">{user?.email}</p>
-                <p className="text-xs text-white/50">Signed in</p>
+
+              <Link to="/candidates" className="shrink-0 lg:hidden" onClick={() => setMenuOpen(false)}>
+                <Logo size="sm" showText={false} />
+              </Link>
+
+              <div className="hidden min-w-0 flex-1 lg:block">
+                <p className="text-sm font-semibold text-white">Recruitment Dashboard</p>
+                <p className="text-xs text-white/45">Review, score, and summarize candidates</p>
               </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <span
-                className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${
-                  isAdmin
-                    ? "bg-accent-primary/30 text-accent-glow border border-accent-primary/50"
-                    : "bg-white/10 text-white/70 border border-white/10"
-                }`}
+
+              <p className="min-w-0 flex-1 truncate text-sm font-semibold text-white lg:hidden">
+                Candidates
+              </p>
+
+              <GlassButton
+                variant="ghost"
+                onClick={logout}
+                className="mobile-logout-btn shrink-0"
               >
-                {user?.role}
-              </span>
-              <GlassButton variant="ghost" onClick={logout} className="!w-auto text-sm">
                 Logout
               </GlassButton>
             </div>
           </header>
 
-          <main className="mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6">
+          <main className="page-enter mx-auto w-full max-w-7xl flex-1 px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
             <Outlet />
           </main>
         </div>

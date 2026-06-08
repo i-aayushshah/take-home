@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AppShell from "./components/layout/AppShell";
 import ProtectedRoute from "./components/layout/ProtectedRoute";
+import CandidateDetailPage from "./pages/CandidateDetailPage";
 import CandidateListPage from "./pages/CandidateListPage";
 import LoginPage from "./pages/LoginPage";
 
@@ -12,6 +13,7 @@ export default function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>
             <Route path="/candidates" element={<CandidateListPage />} />
+            <Route path="/candidates/:id" element={<CandidateDetailPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/candidates" replace />} />

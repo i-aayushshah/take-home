@@ -25,6 +25,8 @@ class CandidateModel(Base):
     role_applied: Mapped[str] = mapped_column(String(100), nullable=False)
     status: Mapped[CandidateStatus] = mapped_column(pg_enum(CandidateStatus, "candidatestatus"), nullable=False)
     skills: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    work_experience: Mapped[list | None] = mapped_column(JSON, nullable=True)
     internal_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     ai_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)

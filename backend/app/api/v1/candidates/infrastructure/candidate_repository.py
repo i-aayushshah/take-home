@@ -5,7 +5,7 @@ from app.shared.time import utc_now
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.candidates.domain.candidate import CandidateAggregate, CandidateFilters
+from app.api.v1.candidates.domain.candidate import CandidateAggregate, CandidateFilters, WorkExperienceEntry
 from app.db.models.candidate import CandidateModel
 from app.shared.base_repository import AbstractRepository
 
@@ -38,6 +38,8 @@ class CandidateRepository(AbstractRepository[CandidateAggregate]):
         model.role_applied = entity.role_applied
         model.status = entity.status
         model.skills = entity.skills
+        model.description = entity.description
+        model.work_experience = [self._experience_to_dict(entry) for entry in entity.work_experience]
         model.internal_notes = entity.internal_notes
         model.ai_summary = entity.ai_summary
         await self._session.flush()
@@ -99,7 +101,38 @@ class CandidateRepository(AbstractRepository[CandidateAggregate]):
             role_applied=model.role_applied,
             status=model.status,
             skills=list(model.skills or []),
+            description=model.description,
+            work_experience=self._parse_work_experience(model.work_experience),
             internal_notes=model.internal_notes,
             ai_summary=model.ai_summary,
             created_at=model.created_at,
         )
+
+    def _parse_work_experience(self, raw: list | None) -> tuple[WorkExperienceEntry, ...]:
+        """Map stored JSON work history to domain entries."""
+        if not raw:
+            return ()
+        entries: list[WorkExperienceEntry] = []
+        for item in raw:
+            if not isinstance(item, dict):
+                continue
+            entries.append(
+                WorkExperienceEntry(
+                    company=str(item.get("company", "")),
+                    title=str(item.get("title", "")),
+                    start=str(item.get("start", "")),
+                    end=item.get("end"),
+                    summary=item.get("summary"),
+                )
+            )
+        return tuple(entries)
+
+    def _experience_to_dict(self, entry: WorkExperienceEntry) -> dict:
+        """Serialize a work experience entry for JSON storage."""
+        return {
+            "company": entry.company,
+            "title": entry.title,
+            "start": entry.start,
+            "end": entry.end,
+            "summary": entry.summary,
+        }

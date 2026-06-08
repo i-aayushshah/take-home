@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.api.v1.auth.domain.exceptions import InvalidCredentialsError, UserAlreadyExistsError
-from app.api.v1.candidates.domain.exceptions import CandidateNotFoundError, InvalidScoreError
+from app.api.v1.candidates.domain.exceptions import AISummaryError, CandidateNotFoundError, InvalidScoreError
 from app.api.v1.router import router as v1_router
 from app.config import get_settings
 from app.seed import seed_database
@@ -67,6 +67,11 @@ def create_app() -> FastAPI:
     async def handle_invalid_score(_: Request, exc: InvalidScoreError) -> JSONResponse:
         """Translate invalid score errors to HTTP 400."""
         return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+    @app.exception_handler(AISummaryError)
+    async def handle_ai_summary_error(_: Request, exc: AISummaryError) -> JSONResponse:
+        """Translate GitHub Models failures to HTTP 502."""
+        return JSONResponse(status_code=502, content={"detail": str(exc)})
 
     return app
 
