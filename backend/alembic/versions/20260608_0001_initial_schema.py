@@ -9,20 +9,29 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision: str = "20260608_0001"
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-role_enum = sa.Enum("admin", "reviewer", name="role")
-candidate_status_enum = sa.Enum("new", "reviewed", "hired", "rejected", name="candidatestatus")
+role_enum = postgresql.ENUM("admin", "reviewer", name="role", create_type=False)
+candidate_status_enum = postgresql.ENUM(
+    "new",
+    "reviewed",
+    "hired",
+    "rejected",
+    name="candidatestatus",
+    create_type=False,
+)
 
 
 def upgrade() -> None:
     """Create core tables and indexes."""
-    role_enum.create(op.get_bind(), checkfirst=True)
-    candidate_status_enum.create(op.get_bind(), checkfirst=True)
+    bind = op.get_bind()
+    role_enum.create(bind, checkfirst=True)
+    candidate_status_enum.create(bind, checkfirst=True)
     op.create_table(
         "users",
         sa.Column("id", sa.String(length=36), nullable=False),
@@ -73,5 +82,6 @@ def downgrade() -> None:
     op.drop_index("ix_candidates_status", table_name="candidates")
     op.drop_table("candidates")
     op.drop_table("users")
-    candidate_status_enum.drop(op.get_bind(), checkfirst=True)
-    role_enum.drop(op.get_bind(), checkfirst=True)
+    bind = op.get_bind()
+    candidate_status_enum.drop(bind, checkfirst=True)
+    role_enum.drop(bind, checkfirst=True)
