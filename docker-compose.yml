@@ -25,11 +25,13 @@ services:
     environment:
       POSTGRES_HOST: db
       REDIS_URL: redis://redis:6379/0
+      UV_LINK_MODE: copy
     depends_on:
       - db
       - redis
     volumes:
       - ./backend:/app
+      - backend_venv:/app/.venv
     command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
@@ -46,3 +48,4 @@ services:
 
 volumes:
   pg_data:
+  backend_venv:

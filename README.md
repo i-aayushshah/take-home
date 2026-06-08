@@ -182,6 +182,16 @@ Each feature (auth, candidates) is organized as domain → application → infra
 
 This project was a good exercise in wiring a full-stack recruitment workflow end-to-end — especially integrating the GitHub Models inference API (migrating from the deprecated Azure endpoint to `models.github.ai`) and building a glass morphism UI with Tailwind v4 utility patterns and custom component classes.
 
+## Docker troubleshooting
+
+If `uv run` inside the backend container fails with `.venv` / `email_validator` errors, the host bind-mount was likely overwriting the Linux virtualenv (common on Windows). This project uses a named Docker volume for `/app/.venv` to avoid that. Recreate containers after pulling the fix:
+
+```bash
+docker compose down
+docker compose up --build -d
+docker compose exec backend uv run alembic upgrade head
+```
+
 ## Known limitations
 
 - SSE streaming for AI summaries not implemented (see optional stretch goals)
