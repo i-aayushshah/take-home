@@ -22,6 +22,7 @@
 @layer base {
   html {
     font-family: var(--font-sans);
+    scrollbar-gutter: stable;
   }
 
   body {
@@ -35,6 +36,58 @@
 
   #root {
     min-height: 100vh;
+  }
+
+  /* Scrollbars — thin, rounded, accent-tinted (Firefox) */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(99, 102, 241, 0.65) rgba(255, 255, 255, 0.05);
+  }
+
+  /* Scrollbars — WebKit (Chrome, Safari, Edge) */
+  *::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+
+  *::-webkit-scrollbar-track {
+    margin: 4px 0;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 9999px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 9999px;
+    background: linear-gradient(
+      180deg,
+      rgba(129, 140, 248, 0.75) 0%,
+      rgba(99, 102, 241, 0.85) 100%
+    );
+    background-clip: padding-box;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(
+      180deg,
+      rgba(165, 180, 252, 0.9) 0%,
+      rgba(129, 140, 248, 0.95) 100%
+    );
+    background-clip: padding-box;
+  }
+
+  *::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(
+      180deg,
+      rgba(99, 102, 241, 1) 0%,
+      rgba(79, 70, 229, 1) 100%
+    );
+    background-clip: padding-box;
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: transparent;
   }
 }
 
@@ -172,6 +225,21 @@
 
   .modal-body {
     @apply min-h-0 flex-1 overflow-y-auto px-6 py-5;
+    scrollbar-gutter: stable;
+  }
+
+  .scrollbar-subtle {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(129, 140, 248, 0.45) transparent;
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar-thumb {
+    background: rgba(129, 140, 248, 0.4);
+    box-shadow: none;
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar-thumb:hover {
+    background: rgba(129, 140, 248, 0.65);
   }
 
   .modal-footer {
