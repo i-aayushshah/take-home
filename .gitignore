@@ -51,6 +51,9 @@ desktop.ini
 *.db
 *.sqlite3
 
+# Uploaded resumes
+uploads/
+
 # Local planning & assignment docs (not for repo)
 phases/
 AGENT.md

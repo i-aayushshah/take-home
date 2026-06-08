@@ -4,9 +4,10 @@ import asyncio
 from typing import Protocol
 
 from app.api.v1.candidates.domain.candidate import CandidateAggregate
-from app.api.v1.candidates.domain.exceptions import CandidateNotFoundError
+from app.api.v1.candidates.domain.exceptions import AISummaryError, CandidateNotFoundError
 from app.api.v1.candidates.infrastructure.github_models_strategy import GitHubModelsStrategy
 from app.api.v1.candidates.infrastructure.unit_of_work import CandidateUnitOfWork
+from app.api.v1.candidates.application.resume_service import ResumeService
 from app.config import Settings
 from app.shared.summary_text import normalize_ai_summary
 
@@ -41,12 +42,27 @@ def build_summary_strategy(settings: Settings) -> SummaryStrategy:
     return MockLLMStrategy()
 
 
+class ResumeParseStrategy(Protocol):
+    """Interface for structured resume parsing."""
+
+    async def parse(self, resume_text: str) -> dict:
+        """Return skills, description, and work_experience from resume text."""
+
+
 class AiService:
     """Orchestrates summary generation and persistence."""
 
-    def __init__(self, uow: CandidateUnitOfWork, strategy: SummaryStrategy) -> None:
+    def __init__(
+        self,
+        uow: CandidateUnitOfWork,
+        strategy: SummaryStrategy,
+        resume_parse_strategy: ResumeParseStrategy | None = None,
+        resume_service: ResumeService | None = None,
+    ) -> None:
         self._uow = uow
         self._strategy = strategy
+        self._resume_parse = resume_parse_strategy
+        self._resume_service = resume_service
 
     async def generate_summary(self, candidate_id: str) -> str:
         """Generate and store a candidate summary.
@@ -70,6 +86,24 @@ class AiService:
             raise CandidateNotFoundError(f"Candidate not found: {candidate_id}")
         await self._uow.commit()
         return summary
+
+    async def parse_resume(self, candidate_id: str) -> dict:
+        """Extract structured profile fields from an uploaded resume."""
+        if self._resume_service is None or self._resume_parse is None:
+            raise AISummaryError("Resume parsing is not configured.")
+
+        candidate = await self._uow.candidates.get_by_id(candidate_id)
+        if candidate is None:
+            raise CandidateNotFoundError(f"Candidate not found: {candidate_id}")
+        if not candidate.resume_filename:
+            raise AISummaryError("Upload a resume before parsing.")
+
+        try:
+            text = self._resume_service.extract_text(candidate_id, candidate.resume_filename)
+        except ValueError as exc:
+            raise AISummaryError(str(exc)) from exc
+
+        return await self._resume_parse.parse(text)
 
     def _build_context(self, candidate: CandidateAggregate) -> str:
         """Serialize candidate profile fields for the LLM prompt."""

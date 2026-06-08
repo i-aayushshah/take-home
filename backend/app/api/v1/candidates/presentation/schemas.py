@@ -55,8 +55,27 @@ class CandidateDetailResponse(BaseModel):
     work_experience: list[WorkExperienceResponse] = []
     ai_summary: str | None
     internal_notes: str | None = None
+    resume_filename: str | None = None
+    rejection_reason: str | None = None
     scores: list[ScoreResponse]
     created_at: datetime
+
+
+class CreateCandidateRequest(BaseModel):
+    """Payload for admin-created applications."""
+
+    name: str = Field(min_length=1, max_length=255)
+    email: str = Field(min_length=3, max_length=255)
+    role_applied: str = Field(min_length=1, max_length=100)
+    skills: list[str] = Field(min_length=1)
+    description: str | None = None
+
+
+class UpdateStatusRequest(BaseModel):
+    """Payload for admin hiring decisions."""
+
+    status: str
+    rejection_reason: str | None = None
 
 
 class CandidateListResponse(BaseModel):
@@ -88,6 +107,46 @@ class UpdateNotesRequest(BaseModel):
     internal_notes: str | None = None
 
 
+class ApplicationSubmittedResponse(BaseModel):
+    """Public confirmation after a self-service application."""
+
+    id: str
+    message: str
+
+
+class AuditEventResponse(BaseModel):
+    """Serialized audit event."""
+
+    id: str
+    actor_id: str | None
+    candidate_id: str
+    action: str
+    payload: dict
+    created_at: datetime
+
+
+class AuditEventListResponse(BaseModel):
+    """List of audit events for a candidate."""
+
+    items: list[AuditEventResponse]
+
+
+class ParseResumeResponse(BaseModel):
+    """AI-extracted resume fields for admin review."""
+
+    skills: list[str]
+    description: str | None
+    work_experience: list[WorkExperienceResponse]
+
+
+class UpdateProfileRequest(BaseModel):
+    """Payload for applying parsed or edited profile fields."""
+
+    skills: list[str] = Field(min_length=1)
+    description: str | None = None
+    work_experience: list[WorkExperienceResponse] = []
+
+
 def to_score_response(entity: ScoreEntity) -> ScoreResponse:
     """Map a score entity to its response schema."""
     return ScoreResponse(
@@ -114,6 +173,18 @@ def to_list_item(entity: CandidateAggregate) -> CandidateListItemResponse:
     )
 
 
+def to_audit_response(entity) -> AuditEventResponse:
+    """Map an audit event entity to its response schema."""
+    return AuditEventResponse(
+        id=entity.id,
+        actor_id=entity.actor_id,
+        candidate_id=entity.candidate_id,
+        action=entity.action,
+        payload=entity.payload,
+        created_at=entity.created_at,
+    )
+
+
 def to_detail_response(entity: CandidateAggregate) -> CandidateDetailResponse:
     """Map a candidate aggregate to a detail response."""
     return CandidateDetailResponse(
@@ -136,6 +207,8 @@ def to_detail_response(entity: CandidateAggregate) -> CandidateDetailResponse:
         ],
         ai_summary=entity.ai_summary,
         internal_notes=entity.internal_notes,
+        resume_filename=entity.resume_filename,
+        rejection_reason=entity.rejection_reason,
         scores=[to_score_response(score) for score in entity.scores],
         created_at=entity.created_at,
     )

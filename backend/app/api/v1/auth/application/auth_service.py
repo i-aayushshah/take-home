@@ -66,3 +66,7 @@ class AuthService:
         if user is None or not self._password_service.verify_password(password, user.hashed_password):
             raise InvalidCredentialsError("Invalid email or password")
         return self._jwt_service.create_access_token(user.id, user.role)
+
+    async def list_team_members(self) -> list[UserEntity]:
+        """Return reviewers and admins for interview assignment."""
+        return await self._uow.users.list_team_members()

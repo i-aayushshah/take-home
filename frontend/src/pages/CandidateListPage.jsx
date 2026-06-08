@@ -1,13 +1,17 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import CandidateCard from "../components/CandidateCard";
+import CreateCandidateModal from "../components/CreateCandidateModal";
+import HiringPipelineInfo from "../components/HiringPipelineInfo";
 import Pagination from "../components/Pagination";
 import GlassCard from "../components/layout/GlassCard";
 import EmptyState from "../components/ui/EmptyState";
+import GlassButton from "../components/ui/GlassButton";
 import InputField from "../components/ui/InputField";
 import PageHeader from "../components/ui/PageHeader";
 import Spinner from "../components/ui/Spinner";
 import { useCandidates } from "../hooks/useCandidates";
+import useAuthStore from "../store/authStore";
 
 const STATUS_OPTIONS = [
   { value: "", label: "All statuses" },
@@ -47,6 +51,8 @@ function activeFilterCount(filters) {
 
 export default function CandidateListPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const isAdmin = useAuthStore((state) => state.user?.role === "admin");
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = useMemo(() => parseFilters(searchParams), [searchParams]);
   const apiParams = useMemo(() => toApiParams(filters), [filters]);
@@ -82,7 +88,7 @@ export default function CandidateListPage() {
       <PageHeader
         eyebrow="Talent pipeline"
         title="Candidates"
-        description="Review applications, submit structured scores, and generate AI summaries from one workspace."
+        description="Browse the pipeline, filter by role or skill, and open profiles to score and summarize."
       >
         {!isLoading && data && (
           <span className="stat-badge">
@@ -90,7 +96,14 @@ export default function CandidateListPage() {
             {data.total} total
           </span>
         )}
+        {isAdmin && (
+          <GlassButton onClick={() => setCreateOpen(true)} className="w-full sm:w-auto">
+            Add Candidate
+          </GlassButton>
+        )}
       </PageHeader>
+
+      <HiringPipelineInfo />
 
       <div className="filter-panel">
         <button
@@ -120,7 +133,7 @@ export default function CandidateListPage() {
 
         <div className={`p-4 sm:p-5 ${filtersOpen ? "block" : "hidden sm:block"}`}>
           <div className="mb-4 flex items-center justify-between gap-3">
-            <p className="hidden text-sm font-semibold text-white/80 sm:block">Refine results</p>
+            <p className="hidden text-sm font-semibold text-white sm:block">Search &amp; filters</p>
             {activeFilters > 0 && (
               <button
                 type="button"
@@ -254,6 +267,8 @@ export default function CandidateListPage() {
           )}
         </>
       )}
+
+      <CreateCandidateModal open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   );
 }

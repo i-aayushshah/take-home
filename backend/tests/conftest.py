@@ -28,8 +28,7 @@ from app.api.v1.candidates.domain.enums import CandidateStatus
 from app.config import get_settings
 from app.database import get_session
 from app.db.base import Base
-from app.db.models.candidate import CandidateModel
-from app.db.models.user import UserModel
+from app.db.models import AuditEventModel, CandidateModel, InterviewModel, UserModel  # noqa: F401
 from app.main import create_app
 from app.shared.redis import get_redis
 from app.shared.time import utc_now

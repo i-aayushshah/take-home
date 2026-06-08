@@ -132,33 +132,52 @@ DEMO_PROFILES: dict[str, dict] = {
 }
 
 
+DEMO_USERS: list[tuple[str, str, Role]] = [
+    ("admin@techkraft.com", "admin12345", Role.ADMIN),
+    ("reviewer1@techkraft.com", "reviewer12345", Role.REVIEWER),
+    ("reviewer2@techkraft.com", "reviewer12345", Role.REVIEWER),
+]
+
+REJECTION_REASONS: dict[str, str] = {
+    "james.okafor@example.com": (
+        "Insufficient platform experience for senior DevOps role; team prioritizing candidates "
+        "with multi-region Kubernetes ownership."
+    ),
+}
+
+
 async def seed_database(session: AsyncSession) -> None:
     """Insert demo users and candidates when the database is empty.
 
     Args:
         session: Active async database session.
     """
+    await _seed_demo_users(session)
     candidate_count = await session.scalar(select(func.count()).select_from(CandidateModel))
     if candidate_count and candidate_count > 0:
         await _backfill_candidate_profiles(session)
         await session.commit()
         return
-    await _seed_admin_user(session)
     await _seed_candidates(session)
     await session.commit()
 
 
-async def _seed_admin_user(session: AsyncSession) -> None:
-    """Create a default admin account for local testing."""
+async def _seed_demo_users(session: AsyncSession) -> None:
+    """Ensure demo admin and reviewer accounts exist."""
     repository = UserRepository(session)
     password_service = PasswordService()
-    admin = UserEntity(
-        id=str(uuid.uuid4()),
-        email="admin@techkraft.com",
-        hashed_password=password_service.hash_password("admin12345"),
-        role=Role.ADMIN,
-    )
-    await repository.save(admin)
+    for email, password, role in DEMO_USERS:
+        existing = await repository.find_by_email(email)
+        if existing is not None:
+            continue
+        await repository.save(
+            UserEntity(
+                id=str(uuid.uuid4()),
+                email=email,
+                hashed_password=password_service.hash_password(password),
+                role=role,
+            )
+        )
 
 
 async def _seed_candidates(session: AsyncSession) -> None:
@@ -236,6 +255,7 @@ def _build_candidate(
         description=profile.get("description"),
         work_experience=profile.get("work_experience"),
         internal_notes=internal_notes,
+        rejection_reason=REJECTION_REASONS.get(email),
         created_at=created_at,
         deleted_at=None,
     )
@@ -252,6 +272,8 @@ async def _backfill_candidate_profiles(session: AsyncSession) -> None:
             model.description = profile["description"]
         if model.work_experience is None:
             model.work_experience = profile["work_experience"]
+        if model.rejection_reason is None and model.email in REJECTION_REASONS:
+            model.rejection_reason = REJECTION_REASONS[model.email]
 
 
 async def run_seed() -> None:

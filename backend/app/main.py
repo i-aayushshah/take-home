@@ -9,7 +9,13 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.api.v1.auth.domain.exceptions import InvalidCredentialsError, UserAlreadyExistsError
-from app.api.v1.candidates.domain.exceptions import AISummaryError, CandidateNotFoundError, InvalidScoreError
+from app.api.v1.candidates.domain.exceptions import (
+    AISummaryError,
+    CandidateNotFoundError,
+    DuplicateCandidateError,
+    InvalidScoreError,
+    InvalidStatusError,
+)
 from app.api.v1.router import router as v1_router
 from app.config import get_settings
 from app.seed import seed_database
@@ -77,6 +83,16 @@ def create_app() -> FastAPI:
     async def handle_ai_summary_error(_: Request, exc: AISummaryError) -> JSONResponse:
         """Translate GitHub Models failures to HTTP 502."""
         return JSONResponse(status_code=502, content={"detail": str(exc)})
+
+    @app.exception_handler(InvalidStatusError)
+    async def handle_invalid_status(_: Request, exc: InvalidStatusError) -> JSONResponse:
+        """Translate invalid hiring status updates to HTTP 400."""
+        return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+    @app.exception_handler(DuplicateCandidateError)
+    async def handle_duplicate_candidate(_: Request, exc: DuplicateCandidateError) -> JSONResponse:
+        """Translate duplicate candidate errors to HTTP 409."""
+        return JSONResponse(status_code=409, content={"detail": str(exc)})
 
     return app
 

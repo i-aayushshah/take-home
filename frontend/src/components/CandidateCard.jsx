@@ -7,21 +7,21 @@ export default function CandidateCard({ candidate }) {
   const extraSkills = Math.max(0, (candidate.skills?.length || 0) - 3);
 
   return (
-    <Link to={`/candidates/${candidate.id}`} className="glass-card-interactive group block">
+    <Link to={`/candidates/${candidate.id}`} className="glass-card-interactive group block h-full">
       <div className="flex items-start gap-4">
         <AvatarInitials name={candidate.name} size="md" />
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <h3 className="truncate text-lg font-bold text-white transition-colors group-hover:text-accent-glow">
+              <h3 className="truncate text-base font-bold text-white transition-colors group-hover:text-accent-glow sm:text-lg">
                 {candidate.name}
               </h3>
-              <p className="mt-0.5 truncate text-sm text-white/50">{candidate.email}</p>
+              <p className="mt-0.5 truncate text-sm text-white/45">{candidate.email}</p>
             </div>
             <StatusPill status={candidate.status} />
           </div>
 
-          <p className="mt-4 text-sm font-semibold text-white/85">{candidate.role_applied}</p>
+          <p className="mt-3 text-sm font-semibold text-white/90">{candidate.role_applied}</p>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {topSkills.map((skill) => (

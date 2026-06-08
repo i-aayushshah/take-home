@@ -22,3 +22,17 @@ class TokenResponse(BaseModel):
 
     access_token: str
     token_type: str = "bearer"
+
+
+class TeamMemberResponse(BaseModel):
+    """Reviewer or admin available for interview assignment."""
+
+    id: str
+    email: str
+    role: str
+
+
+class TeamListResponse(BaseModel):
+    """List of team members."""
+
+    items: list[TeamMemberResponse]

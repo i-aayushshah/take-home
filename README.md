@@ -39,7 +39,15 @@ docker compose exec backend uv run python -m seed
 | PostgreSQL | localhost:5432 |
 | Redis | localhost:6379 |
 
-**Demo admin login:** `admin@techkraft.com` / `admin12345`
+### Demo accounts (seeded)
+
+| Role | Email | Password | Can do |
+|---|---|---|---|
+| **Admin** | `admin@techkraft.com` | `admin12345` | Hiring decisions, resume upload, internal notes, create/remove candidates |
+| **Reviewer** | `reviewer1@techkraft.com` | `reviewer12345` | Submit scores, view own scores, generate AI summaries |
+| **Reviewer** | `reviewer2@techkraft.com` | `reviewer12345` | Same as reviewer1 (test multi-reviewer isolation) |
+
+Register at `/api/v1/auth/register` always creates a **reviewer** — admin accounts are seeded only.
 
 Stop services:
 
@@ -135,7 +143,45 @@ curl -X POST http://localhost:8000/api/v1/candidates/CANDIDATE_ID/scores \
 # Generate AI summary
 curl -X POST http://localhost:8000/api/v1/candidates/CANDIDATE_ID/summary \
   -H "Authorization: Bearer TOKEN"
+
+# Admin: reject with reason (required, min 10 chars)
+curl -X PATCH http://localhost:8000/api/v1/candidates/CANDIDATE_ID/status \
+  -H "Authorization: Bearer ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"rejected","rejection_reason":"Insufficient platform experience for the role."}'
+
+# Admin: upload resume
+curl -X POST http://localhost:8000/api/v1/candidates/CANDIDATE_ID/resume \
+  -H "Authorization: Bearer ADMIN_TOKEN" \
+  -F "file=@resume.pdf"
+
+# Admin: AI token health check
+curl http://localhost:8000/api/v1/health/ai \
+  -H "Authorization: Bearer ADMIN_TOKEN"
 ```
+
+## Hiring workflow (real-world logic)
+
+```
+NEW → REVIEWED → HIRED
+              ↘ REJECTED (requires reason)
+```
+
+| Status | How it happens |
+|---|---|
+| **new** | Application created (seed, admin "Add Candidate", or future public apply form) |
+| **reviewed** | **Automatically** when the first reviewer submits a score |
+| **hired** | Admin sets status via Hiring Decision panel |
+| **rejected** | Admin sets status + **mandatory rejection reason** (min 10 characters, stored on record) |
+
+**Reviewers** see only their own scores and never see internal notes or rejection reasons.  
+**Admins** see all scores, internal notes, rejection reasons, and can upload resumes (PDF/DOC/DOCX, max 5 MB).
+
+**James Okafor** in seed data is pre-rejected with a sample reason — filter by `status=rejected` to see it.
+
+### Live score updates (SSE)
+
+`GET /api/v1/candidates/{id}/stream` pushes score events when any reviewer submits. The detail page listens and refreshes automatically. Dev uses in-memory queues; production should use Redis pub/sub.
 
 ## Running tests
 
@@ -192,9 +238,35 @@ docker compose up --build -d
 docker compose exec backend uv run alembic upgrade head
 ```
 
+## Extension features
+
+| Feature | Endpoint / route | Notes |
+|---|---|---|
+| Public apply | `POST /api/v1/applications`, `/apply` | No auth; rate-limited (5/min per IP); optional resume upload |
+| Email notifications | Hooked in `update_status` / auto-review | Set `EMAIL_ENABLED=true` + SMTP vars; logs when disabled |
+| Interview scheduling | `/api/v1/interviews`, `/interviews` | Admin calendar + per-candidate schedule panel |
+| Resume AI parse | `POST /api/v1/candidates/{id}/parse-resume` | PDF only; mock or GitHub Models; review before save |
+| Audit log | `GET /api/v1/candidates/{id}/audit` | Admin Activity tab on candidate detail |
+
+```bash
+# Public application (multipart)
+curl -X POST http://localhost:8000/api/v1/applications \
+  -F "name=Alex Kim" \
+  -F "email=alex@example.com" \
+  -F "role_applied=Backend Engineer" \
+  -F "skills=Python,FastAPI" \
+  -F "resume=@./resume.pdf"
+
+# Enable SMTP emails in .env
+EMAIL_ENABLED=true
+SMTP_HOST=smtp.example.com
+SMTP_USER=...
+SMTP_PASSWORD=...
+```
+
 ## Known limitations
 
-- SSE streaming for AI summaries not implemented (see optional stretch goals)
+- SSE uses in-memory queues (not Redis pub/sub) — fine for dev, not multi-instance production
 - Rate limiter uses a fixed Redis window, not a sliding-window Lua script
 - Docker frontend runs the Vite dev server, not a production nginx static build
 - Skill filter uses JSON `contains` — behavior is PostgreSQL-specific
