@@ -1,31 +1,40 @@
 """Candidate HTTP routes."""
 
-from fastapi import APIRouter, Depends, Query
+import asyncio
+import json
+
+from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi.responses import FileResponse, StreamingResponse
 
 from app.api.v1.auth.domain.enums import Role
 from app.api.v1.auth.domain.user import UserEntity
 from app.api.v1.candidates.application.ai_service import AiService
-from app.api.v1.candidates.domain.enums import CandidateStatus
 from app.api.v1.candidates.application.candidate_service import CandidateService
+from app.api.v1.candidates.application.resume_service import ResumeService
 from app.api.v1.candidates.application.score_service import ScoreService
+from app.api.v1.candidates.domain.enums import CandidateStatus
 from app.api.v1.candidates.presentation.dependencies import (
     get_ai_service,
     get_candidate_service,
+    get_resume_service,
     get_score_service,
 )
 from app.api.v1.candidates.presentation.schemas import (
     CandidateDetailResponse,
     CandidateListResponse,
+    CreateCandidateRequest,
     ScoreResponse,
     ScoreSubmitRequest,
     SummaryResponse,
     UpdateNotesRequest,
+    UpdateStatusRequest,
     to_detail_response,
     to_list_item,
     to_score_response,
 )
 from app.api.v1.dependencies import get_current_user, require_admin
 from app.shared.rate_limiter import RateLimiter
+from app.shared.sse import score_event_bus
 
 router = APIRouter()
 
@@ -54,6 +63,24 @@ async def list_candidates(
     )
 
 
+@router.post("", response_model=CandidateDetailResponse, status_code=201)
+async def create_candidate(
+    body: CreateCandidateRequest,
+    current_user: UserEntity = Depends(require_admin),
+    candidate_service: CandidateService = Depends(get_candidate_service),
+) -> CandidateDetailResponse:
+    """Create a new candidate application (admin only)."""
+    candidate = await candidate_service.create_candidate(
+        name=body.name,
+        email=body.email,
+        role_applied=body.role_applied,
+        skills=body.skills,
+        description=body.description,
+    )
+    detail = await candidate_service.get_candidate(candidate.id, current_user.id, True)
+    return to_detail_response(detail)
+
+
 @router.get("/{candidate_id}", response_model=CandidateDetailResponse)
 async def get_candidate(
     candidate_id: str,
@@ -64,6 +91,31 @@ async def get_candidate(
     is_admin = current_user.role == Role.ADMIN
     candidate = await candidate_service.get_candidate(candidate_id, current_user.id, is_admin)
     return to_detail_response(candidate)
+
+
+@router.get("/{candidate_id}/stream")
+async def stream_candidate_scores(
+    candidate_id: str,
+    current_user: UserEntity = Depends(get_current_user),
+    candidate_service: CandidateService = Depends(get_candidate_service),
+) -> StreamingResponse:
+    """Stream score events for a candidate via Server-Sent Events."""
+    await candidate_service.get_candidate(candidate_id, current_user.id, current_user.role == Role.ADMIN)
+
+    async def event_generator():
+        queue = score_event_bus.subscribe(candidate_id)
+        try:
+            yield f"data: {json.dumps({'type': 'connected'})}\n\n"
+            while True:
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=30.0)
+                    yield f"data: {json.dumps({'type': 'score', 'payload': event})}\n\n"
+                except asyncio.TimeoutError:
+                    yield ": keepalive\n\n"
+        finally:
+            score_event_bus.unsubscribe(candidate_id, queue)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 @router.post("/{candidate_id}/scores", response_model=ScoreResponse, dependencies=[Depends(_score_limiter)])
@@ -95,6 +147,20 @@ async def trigger_summary(
     return SummaryResponse(summary=summary)
 
 
+@router.patch("/{candidate_id}/status", response_model=CandidateDetailResponse)
+async def update_candidate_status(
+    candidate_id: str,
+    body: UpdateStatusRequest,
+    current_user: UserEntity = Depends(require_admin),
+    candidate_service: CandidateService = Depends(get_candidate_service),
+) -> CandidateDetailResponse:
+    """Update hiring pipeline status (admin only)."""
+    status = CandidateStatus(body.status)
+    await candidate_service.update_status(candidate_id, status, body.rejection_reason)
+    candidate = await candidate_service.get_candidate(candidate_id, current_user.id, True)
+    return to_detail_response(candidate)
+
+
 @router.patch("/{candidate_id}/notes", response_model=CandidateDetailResponse)
 async def update_notes(
     candidate_id: str,
@@ -106,6 +172,50 @@ async def update_notes(
     await candidate_service.update_internal_notes(candidate_id, body.internal_notes)
     candidate = await candidate_service.get_candidate(candidate_id, current_user.id, True)
     return to_detail_response(candidate)
+
+
+@router.post("/{candidate_id}/resume", response_model=CandidateDetailResponse)
+async def upload_resume(
+    candidate_id: str,
+    file: UploadFile = File(...),
+    current_user: UserEntity = Depends(require_admin),
+    candidate_service: CandidateService = Depends(get_candidate_service),
+    resume_service: ResumeService = Depends(get_resume_service),
+) -> CandidateDetailResponse:
+    """Upload or replace a candidate resume (admin only)."""
+    try:
+        filename = await resume_service.save_resume(candidate_id, file)
+    except ValueError as exc:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    await candidate_service.attach_resume(candidate_id, filename)
+    candidate = await candidate_service.get_candidate(candidate_id, current_user.id, True)
+    return to_detail_response(candidate)
+
+
+@router.get("/{candidate_id}/resume")
+async def download_resume(
+    candidate_id: str,
+    _: UserEntity = Depends(get_current_user),
+    candidate_service: CandidateService = Depends(get_candidate_service),
+    resume_service: ResumeService = Depends(get_resume_service),
+) -> FileResponse:
+    """Download the candidate resume when available."""
+    candidate = await candidate_service.get_candidate(candidate_id, "", True)
+    if not candidate.resume_filename:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="Resume not uploaded.")
+
+    path = resume_service.resolve_resume_path(candidate_id, candidate.resume_filename)
+    if path is None:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="Resume file missing on disk.")
+
+    return FileResponse(path, filename=candidate.resume_filename)
 
 
 @router.delete("/{candidate_id}", status_code=204)

@@ -55,8 +55,27 @@ class CandidateDetailResponse(BaseModel):
     work_experience: list[WorkExperienceResponse] = []
     ai_summary: str | None
     internal_notes: str | None = None
+    resume_filename: str | None = None
+    rejection_reason: str | None = None
     scores: list[ScoreResponse]
     created_at: datetime
+
+
+class CreateCandidateRequest(BaseModel):
+    """Payload for admin-created applications."""
+
+    name: str = Field(min_length=1, max_length=255)
+    email: str = Field(min_length=3, max_length=255)
+    role_applied: str = Field(min_length=1, max_length=100)
+    skills: list[str] = Field(min_length=1)
+    description: str | None = None
+
+
+class UpdateStatusRequest(BaseModel):
+    """Payload for admin hiring decisions."""
+
+    status: str
+    rejection_reason: str | None = None
 
 
 class CandidateListResponse(BaseModel):
@@ -136,6 +155,8 @@ def to_detail_response(entity: CandidateAggregate) -> CandidateDetailResponse:
         ],
         ai_summary=entity.ai_summary,
         internal_notes=entity.internal_notes,
+        resume_filename=entity.resume_filename,
+        rejection_reason=entity.rejection_reason,
         scores=[to_score_response(score) for score in entity.scores],
         created_at=entity.created_at,
     )

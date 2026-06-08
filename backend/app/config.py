@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     github_token: str = ""
     github_model: str = "openai/gpt-4o-mini"
     ai_summary_fallback_mock: bool = True
+    upload_dir: str = "uploads"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
     model_config = SettingsConfigDict(

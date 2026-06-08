@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.candidates.application.ai_service import AiService, build_summary_strategy
 from app.api.v1.candidates.application.candidate_service import CandidateService
+from app.api.v1.candidates.application.resume_service import ResumeService
 from app.api.v1.candidates.application.score_service import ScoreService
 from app.api.v1.candidates.infrastructure.unit_of_work import CandidateUnitOfWork
 from app.config import Settings, get_settings
@@ -21,9 +22,17 @@ def get_candidate_service(uow: CandidateUnitOfWork = Depends(get_candidate_uow))
     return CandidateService(uow)
 
 
-def get_score_service(uow: CandidateUnitOfWork = Depends(get_candidate_uow)) -> ScoreService:
+def get_score_service(
+    uow: CandidateUnitOfWork = Depends(get_candidate_uow),
+    candidate_service: CandidateService = Depends(get_candidate_service),
+) -> ScoreService:
     """Return a score service wired with its unit of work."""
-    return ScoreService(uow)
+    return ScoreService(uow, candidate_service)
+
+
+def get_resume_service(settings: Settings = Depends(get_settings)) -> ResumeService:
+    """Return a resume storage service."""
+    return ResumeService(settings)
 
 
 def get_ai_service(

@@ -1,15 +1,23 @@
-import { Link, useParams } from "react-router-dom";
+import { useCallback, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import AISummaryPanel from "../components/AISummaryPanel";
+import ApplicationDecisionPanel from "../components/ApplicationDecisionPanel";
 import InternalNotesPanel from "../components/InternalNotesPanel";
+import ResumePanel from "../components/ResumePanel";
 import ScoringForm from "../components/ScoringForm";
 import WorkExperienceTimeline from "../components/WorkExperienceTimeline";
 import GlassCard from "../components/layout/GlassCard";
 import AvatarInitials from "../components/ui/AvatarInitials";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
 import EmptyState from "../components/ui/EmptyState";
+import GlassButton from "../components/ui/GlassButton";
 import SectionHeader from "../components/ui/SectionHeader";
 import StatusPill from "../components/ui/StatusPill";
 import Spinner from "../components/ui/Spinner";
+import { deleteCandidate } from "../api/candidates";
 import { useCandidate } from "../hooks/useCandidate";
+import { useCandidateStream } from "../hooks/useCandidateStream";
 import useAuthStore from "../store/authStore";
 
 function formatCategory(category) {
@@ -50,9 +58,30 @@ function ExperienceIcon() {
 
 export default function CandidateDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const { data: candidate, isLoading, isError, error } = useCandidate(id);
   const isAdmin = user?.role === "admin";
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleLiveScore = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["candidate", id] });
+  }, [id, queryClient]);
+
+  useCandidateStream(id, handleLiveScore);
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await deleteCandidate(id);
+      navigate("/candidates");
+    } finally {
+      setDeleting(false);
+      setDeleteOpen(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -154,6 +183,12 @@ export default function CandidateDetailPage() {
             </div>
           </GlassCard>
 
+          <ResumePanel
+            candidateId={candidate.id}
+            resumeFilename={candidate.resume_filename}
+            isAdmin={isAdmin}
+          />
+
           <GlassCard hover={false}>
             <SectionHeader
               icon={<ProfileIcon />}
@@ -226,8 +261,31 @@ export default function CandidateDetailPage() {
       </div>
 
       {isAdmin && (
-        <InternalNotesPanel candidateId={candidate.id} initialNotes={candidate.internal_notes} />
+        <>
+          <ApplicationDecisionPanel
+            candidateId={candidate.id}
+            currentStatus={candidate.status}
+            rejectionReason={candidate.rejection_reason}
+          />
+          <InternalNotesPanel candidateId={candidate.id} initialNotes={candidate.internal_notes} />
+          <div className="flex justify-end">
+            <GlassButton variant="ghost" onClick={() => setDeleteOpen(true)} className="!border-red-400/30 !text-red-200">
+              Remove Candidate
+            </GlassButton>
+          </div>
+        </>
       )}
+
+      <ConfirmDialog
+        open={deleteOpen}
+        title="Remove candidate?"
+        description="This soft-deletes the application from the active pipeline. The record is retained for audit purposes."
+        confirmLabel="Remove"
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteOpen(false)}
+        loading={deleting}
+      />
     </div>
   );
 }

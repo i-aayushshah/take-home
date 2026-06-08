@@ -34,8 +34,8 @@ export default function AppShell() {
 
   return (
     <div className="app-shell-bg relative min-h-screen">
-      <div className="orb top-16 left-6 h-44 w-44 bg-accent-primary opacity-25" />
-      <div className="orb orb-delayed bottom-16 right-6 h-56 w-56 bg-accent-glow opacity-20" />
+      <div className="orb top-16 left-6 h-44 w-44 bg-accent-primary opacity-15" />
+      <div className="orb orb-delayed bottom-16 right-6 h-56 w-56 bg-accent-glow opacity-10" />
 
       <div className="flex min-h-screen">
         <aside

@@ -44,5 +44,7 @@ class CandidateAggregate:
     work_experience: tuple[WorkExperienceEntry, ...]
     internal_notes: str | None
     ai_summary: str | None
+    resume_filename: str | None
+    rejection_reason: str | None
     created_at: datetime
     scores: tuple[ScoreEntity, ...] = ()

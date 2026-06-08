@@ -135,12 +135,24 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/45">Demo access</p>
-            <p className="mt-1 text-sm text-white/75">
-              <span className="font-semibold text-white">admin@techkraft.com</span>
-              <span className="text-white/40"> · </span>
-              <span className="font-mono text-accent-glow">admin12345</span>
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-white/45">Demo accounts</p>
+            <div className="mt-3 space-y-2 text-sm text-white/75">
+              <p>
+                <span className="rounded bg-accent-primary/20 px-2 py-0.5 text-xs font-bold text-accent-glow">ADMIN</span>
+                <span className="ml-2 font-semibold text-white">admin@techkraft.com</span>
+                <span className="text-white/40"> · </span>
+                <span className="font-mono text-accent-glow">admin12345</span>
+              </p>
+              <p>
+                <span className="rounded bg-white/10 px-2 py-0.5 text-xs font-bold text-white/60">REVIEWER</span>
+                <span className="ml-2 font-semibold text-white">reviewer1@techkraft.com</span>
+                <span className="text-white/40"> · </span>
+                <span className="font-mono text-accent-glow">reviewer12345</span>
+              </p>
+              <p className="text-xs text-white/45">
+                Reviewers submit scores and see only their own. Admins manage hiring decisions, resumes, and notes.
+              </p>
+            </div>
           </div>
         </section>
       </div>

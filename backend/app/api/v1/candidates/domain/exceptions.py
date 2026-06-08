@@ -13,3 +13,11 @@ class InvalidScoreError(DomainError):
 
 class AISummaryError(DomainError):
     """Raised when AI summary generation fails."""
+
+
+class InvalidStatusError(DomainError):
+    """Raised when a hiring status update violates business rules."""
+
+
+class DuplicateCandidateError(DomainError):
+    """Raised when creating a candidate with an existing email."""

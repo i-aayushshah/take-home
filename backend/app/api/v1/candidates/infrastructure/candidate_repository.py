@@ -42,7 +42,43 @@ class CandidateRepository(AbstractRepository[CandidateAggregate]):
         model.work_experience = [self._experience_to_dict(entry) for entry in entity.work_experience]
         model.internal_notes = entity.internal_notes
         model.ai_summary = entity.ai_summary
+        model.resume_filename = entity.resume_filename
+        model.rejection_reason = entity.rejection_reason
         await self._session.flush()
+        return self._to_entity(model)
+
+    async def create(self, entity: CandidateAggregate) -> CandidateAggregate:
+        """Insert a new candidate record."""
+        model = CandidateModel(
+            id=entity.id,
+            name=entity.name,
+            email=entity.email,
+            role_applied=entity.role_applied,
+            status=entity.status,
+            skills=entity.skills,
+            description=entity.description,
+            work_experience=[self._experience_to_dict(entry) for entry in entity.work_experience],
+            internal_notes=entity.internal_notes,
+            ai_summary=entity.ai_summary,
+            resume_filename=entity.resume_filename,
+            rejection_reason=entity.rejection_reason,
+            created_at=entity.created_at,
+            deleted_at=None,
+        )
+        self._session.add(model)
+        await self._session.flush()
+        return self._to_entity(model)
+
+    async def find_by_email(self, email: str) -> CandidateAggregate | None:
+        """Return an active candidate with the given email, if any."""
+        statement = select(CandidateModel).where(
+            CandidateModel.email == email,
+            CandidateModel.deleted_at.is_(None),
+        )
+        result = await self._session.execute(statement)
+        model = result.scalar_one_or_none()
+        if model is None:
+            return None
         return self._to_entity(model)
 
     async def list_filtered(self, filters: CandidateFilters) -> tuple[list[CandidateAggregate], int]:
@@ -105,6 +141,8 @@ class CandidateRepository(AbstractRepository[CandidateAggregate]):
             work_experience=self._parse_work_experience(model.work_experience),
             internal_notes=model.internal_notes,
             ai_summary=model.ai_summary,
+            resume_filename=model.resume_filename,
+            rejection_reason=model.rejection_reason,
             created_at=model.created_at,
         )
 
