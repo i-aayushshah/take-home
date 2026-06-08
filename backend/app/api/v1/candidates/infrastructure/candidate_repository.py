@@ -2,7 +2,8 @@
 
 from app.shared.time import utc_now
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, cast, exists, func, or_, select
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.candidates.domain.candidate import CandidateAggregate, CandidateFilters, WorkExperienceEntry
@@ -114,6 +115,20 @@ class CandidateRepository(AbstractRepository[CandidateAggregate]):
         await self._session.flush()
         return self._to_entity(model)
 
+    def _skill_filter_clause(self, skill: str):
+        """Match candidates whose skills array includes the given skill (case-insensitive)."""
+        dialect_name = self._session.get_bind().dialect.name
+        normalized_skill = skill.strip().lower()
+        if dialect_name == "postgresql":
+            skill_values = func.jsonb_array_elements_text(cast(CandidateModel.skills, JSONB)).table_valued("value")
+            return exists(
+                select(1).select_from(skill_values).where(func.lower(skill_values.c.value) == normalized_skill)
+            )
+        skill_entries = func.json_each(CandidateModel.skills).table_valued("key", "value")
+        return exists(
+            select(1).select_from(skill_entries).where(func.lower(skill_entries.c.value) == normalized_skill)
+        )
+
     def _build_filter_clause(self, filters: CandidateFilters):
         """Compose SQL WHERE clauses for candidate filtering."""
         clauses = [CandidateModel.deleted_at.is_(None)]
@@ -122,7 +137,7 @@ class CandidateRepository(AbstractRepository[CandidateAggregate]):
         if filters.role_applied:
             clauses.append(CandidateModel.role_applied.ilike(f"%{filters.role_applied}%"))
         if filters.skill:
-            clauses.append(CandidateModel.skills.contains([filters.skill]))
+            clauses.append(self._skill_filter_clause(filters.skill))
         if filters.keyword:
             pattern = f"%{filters.keyword}%"
             clauses.append(or_(CandidateModel.name.ilike(pattern), CandidateModel.email.ilike(pattern)))

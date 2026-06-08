@@ -148,6 +148,49 @@ async def test_list_candidates_status_filter_uses_sql_total(
 
 
 @pytest.mark.asyncio
+async def test_list_candidates_skill_filter_matches_case_insensitive(
+    client: AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Skill filter matches JSON array skills in SQL (case-insensitive)."""
+    async with session_factory() as session:
+        session.add_all(
+            [
+                CandidateModel(
+                    id=str(uuid.uuid4()),
+                    name="Python Dev",
+                    email="python@example.com",
+                    role_applied="Engineer",
+                    status=CandidateStatus.NEW,
+                    skills=["Python", "FastAPI"],
+                    created_at=utc_now(),
+                ),
+                CandidateModel(
+                    id=str(uuid.uuid4()),
+                    name="Go Dev",
+                    email="go@example.com",
+                    role_applied="Engineer",
+                    status=CandidateStatus.NEW,
+                    skills=["Go"],
+                    created_at=utc_now(),
+                ),
+            ]
+        )
+        await session.commit()
+
+    token = await register_and_login(client, "skill-filter@techkraft.com")
+    response = await client.get(
+        "/api/v1/candidates?skill=python",
+        headers=auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["total"] == 1
+    assert payload["items"][0]["name"] == "Python Dev"
+
+
+@pytest.mark.asyncio
 async def test_soft_deleted_candidate_returns_not_found(
     client: AsyncClient,
     seeded_candidate: str,
