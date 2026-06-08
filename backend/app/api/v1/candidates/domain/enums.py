@@ -10,3 +10,11 @@ class CandidateStatus(str, Enum):
     REVIEWED = "reviewed"
     HIRED = "hired"
     REJECTED = "rejected"
+
+
+class ScoreCategory(str, Enum):
+    """Predefined score categories for candidate assessments."""
+
+    TECHNICAL = "technical"
+    COMMUNICATION = "communication"
+    CULTURE_FIT = "culture_fit"

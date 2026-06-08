@@ -1,0 +1,35 @@
+"""Candidate domain entities and filter value objects."""
+
+from dataclasses import dataclass
+from datetime import datetime
+
+from app.api.v1.candidates.domain.enums import CandidateStatus
+from app.api.v1.candidates.domain.score import ScoreEntity
+
+
+@dataclass(frozen=True)
+class CandidateFilters:
+    """Filter and pagination constraints for candidate list queries."""
+
+    status: CandidateStatus | None = None
+    role_applied: str | None = None
+    skill: str | None = None
+    keyword: str | None = None
+    offset: int = 0
+    limit: int = 20
+
+
+@dataclass(frozen=True)
+class CandidateAggregate:
+    """Domain representation of a candidate and related data."""
+
+    id: str
+    name: str
+    email: str
+    role_applied: str
+    status: CandidateStatus
+    skills: list[str]
+    internal_notes: str | None
+    ai_summary: str | None
+    created_at: datetime
+    scores: tuple[ScoreEntity, ...] = ()
