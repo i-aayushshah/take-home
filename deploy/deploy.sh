@@ -22,7 +22,9 @@ if [ ! -f .env ]; then
 fi
 
 echo "==> Pulling latest compose + scripts..."
-git pull --ff-only origin main || git pull --ff-only
+git fetch origin main
+# Discard local edits to tracked deploy files (e.g. manual port changes from HTTPS setup).
+git reset --hard origin/main
 
 echo "==> Pulling Docker images (no build on VM)..."
 docker compose -f "$COMPOSE_FILE" pull
@@ -58,15 +60,16 @@ echo "==> Starting all services..."
 docker compose -f "$COMPOSE_FILE" up -d
 
 echo "==> Health checks..."
+FRONTEND_HEALTH_URL="${FRONTEND_HEALTH_URL:-http://127.0.0.1:8080}"
 for i in $(seq 1 20); do
-  if curl -sf http://127.0.0.1/health >/dev/null 2>&1; then
+  if curl -sf "${FRONTEND_HEALTH_URL}/health" >/dev/null 2>&1; then
     echo "  ✓ Backend is healthy"
     break
   fi
   sleep 3
 done
 
-if curl -sf http://127.0.0.1/ >/dev/null 2>&1; then
+if curl -sf "${FRONTEND_HEALTH_URL}/" >/dev/null 2>&1; then
   echo "  ✓ Frontend is healthy"
 else
   echo "  ! Frontend health check failed — check: docker compose -f $COMPOSE_FILE logs frontend"

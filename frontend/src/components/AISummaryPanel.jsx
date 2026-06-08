@@ -4,6 +4,7 @@ import GlassButton from "./ui/GlassButton";
 import SectionHeader from "./ui/SectionHeader";
 import Spinner from "./ui/Spinner";
 import { useAISummary } from "../hooks/useAISummary";
+import { toast } from "../store/toastStore";
 import { normalizeSummary, summaryParagraphs } from "../utils/summaryText";
 
 function AIIcon() {
@@ -28,7 +29,10 @@ export default function AISummaryPanel({ candidateId, existingSummary }) {
   function handleGenerate() {
     reset();
     mutate(undefined, {
-      onSuccess: (data) => setSummary(data.summary),
+      onSuccess: (data) => {
+        setSummary(data.summary);
+        toast("AI summary generated.");
+      },
     });
   }
 

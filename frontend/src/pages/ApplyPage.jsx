@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { submitApplication } from "../api/applications";
 import Logo from "../components/brand/Logo";
 import GlassButton from "../components/ui/GlassButton";
+import { toast } from "../store/toastStore";
 
 export default function ApplyPage() {
   const fileRef = useRef(null);
@@ -32,6 +33,7 @@ export default function ApplyPage() {
     try {
       const result = await submitApplication(formData);
       setSuccess(result.message);
+      toast(result.message || "Application submitted successfully.");
       setName("");
       setEmail("");
       setRoleApplied("");
@@ -41,7 +43,9 @@ export default function ApplyPage() {
       if (fileRef.current) fileRef.current.value = "";
     } catch (err) {
       const detail = err.response?.data?.detail;
-      setError(typeof detail === "string" ? detail : "Unable to submit application. Please try again.");
+      const message = typeof detail === "string" ? detail : "Unable to submit application. Please try again.";
+      setError(message);
+      toast(message, "error");
     } finally {
       setLoading(false);
     }

@@ -21,6 +21,7 @@ import { deleteCandidate } from "../api/candidates";
 import { useCandidate } from "../hooks/useCandidate";
 import { useCandidateStream } from "../hooks/useCandidateStream";
 import useAuthStore from "../store/authStore";
+import { toast } from "../store/toastStore";
 
 function formatCategory(category) {
   return category.replace(/_/g, " ");
@@ -78,7 +79,10 @@ export default function CandidateDetailPage() {
     setDeleting(true);
     try {
       await deleteCandidate(id);
+      toast("Candidate removed from pipeline.");
       navigate("/candidates");
+    } catch (err) {
+      toast(err?.response?.data?.detail || "Failed to remove candidate.", "error");
     } finally {
       setDeleting(false);
       setDeleteOpen(false);

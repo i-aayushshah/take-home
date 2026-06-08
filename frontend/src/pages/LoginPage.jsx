@@ -6,6 +6,7 @@ import GlassButton from "../components/ui/GlassButton";
 import GlassInput from "../components/ui/GlassInput";
 import PasswordInput from "../components/ui/PasswordInput";
 import useAuthStore from "../store/authStore";
+import { toast } from "../store/toastStore";
 
 function EmailIcon() {
   return (
@@ -46,6 +47,7 @@ export default function LoginPage() {
     try {
       const data = await loginRequest(email, password);
       login(data.access_token, email);
+      toast("Signed in successfully.");
       navigate("/candidates");
     } catch (err) {
       const message = err.response?.data?.detail || "Login failed. Check your credentials.";
