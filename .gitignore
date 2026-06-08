@@ -55,6 +55,7 @@ desktop.ini
 uploads/
 
 # Local Azure deployment notes (IPs, tokens, personal checklist)
+deployed_azure.md
 azure_deployed.md
 deployed_azure.local.md
 
