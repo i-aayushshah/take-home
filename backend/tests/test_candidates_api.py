@@ -148,11 +148,11 @@ async def test_list_candidates_status_filter_uses_sql_total(
 
 
 @pytest.mark.asyncio
-async def test_list_candidates_skill_filter_matches_case_insensitive(
+async def test_list_candidates_skill_filter_matches_partial_case_insensitive(
     client: AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """Skill filter matches JSON array skills in SQL (case-insensitive)."""
+    """Skill filter matches JSON array skills via case-insensitive substring."""
     async with session_factory() as session:
         session.add_all(
             [
@@ -179,15 +179,16 @@ async def test_list_candidates_skill_filter_matches_case_insensitive(
         await session.commit()
 
     token = await register_and_login(client, "skill-filter@techkraft.com")
-    response = await client.get(
-        "/api/v1/candidates?skill=python",
-        headers=auth_headers(token),
-    )
+    for skill_query, expected_name in [("python", "Python Dev"), ("fas", "Python Dev")]:
+        response = await client.get(
+            f"/api/v1/candidates?skill={skill_query}",
+            headers=auth_headers(token),
+        )
 
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["total"] == 1
-    assert payload["items"][0]["name"] == "Python Dev"
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["total"] == 1
+        assert payload["items"][0]["name"] == expected_name
 
 
 @pytest.mark.asyncio

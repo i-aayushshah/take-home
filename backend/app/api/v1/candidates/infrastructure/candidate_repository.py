@@ -116,18 +116,14 @@ class CandidateRepository(AbstractRepository[CandidateAggregate]):
         return self._to_entity(model)
 
     def _skill_filter_clause(self, skill: str):
-        """Match candidates whose skills array includes the given skill (case-insensitive)."""
+        """Match candidates whose skills array contains a case-insensitive substring."""
+        pattern = f"%{skill.strip()}%"
         dialect_name = self._session.get_bind().dialect.name
-        normalized_skill = skill.strip().lower()
         if dialect_name == "postgresql":
             skill_values = func.jsonb_array_elements_text(cast(CandidateModel.skills, JSONB)).table_valued("value")
-            return exists(
-                select(1).select_from(skill_values).where(func.lower(skill_values.c.value) == normalized_skill)
-            )
+            return exists(select(1).select_from(skill_values).where(skill_values.c.value.ilike(pattern)))
         skill_entries = func.json_each(CandidateModel.skills).table_valued("key", "value")
-        return exists(
-            select(1).select_from(skill_entries).where(func.lower(skill_entries.c.value) == normalized_skill)
-        )
+        return exists(select(1).select_from(skill_entries).where(skill_entries.c.value.ilike(pattern)))
 
     def _build_filter_clause(self, filters: CandidateFilters):
         """Compose SQL WHERE clauses for candidate filtering."""
