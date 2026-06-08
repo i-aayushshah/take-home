@@ -58,5 +58,11 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           script: |
+            set -euo pipefail
             export VM_APP_DIR="${{ secrets.VM_APP_DIR }}"
-            bash "${{ secrets.VM_APP_DIR }}/deploy/deploy.sh"
+            cd "$VM_APP_DIR"
+            # Bootstrap: VM may have local edits (e.g. manual HTTPS port change) that block git pull.
+            # Reset tracked files before deploy.sh so the latest script always runs.
+            git fetch origin main
+            git reset --hard origin/main
+            bash "$VM_APP_DIR/deploy/deploy.sh"
