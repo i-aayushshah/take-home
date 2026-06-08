@@ -1,5 +1,6 @@
 """FastAPI application entry point."""
 
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -18,6 +19,10 @@ from app.shared.redis import get_redis_client
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Verify Redis connectivity on startup, seed data, and close resources on shutdown."""
+    if os.getenv("TESTING") == "true":
+        yield
+        return
+
     redis = get_redis_client()
     await redis.ping()
     settings = get_settings()
