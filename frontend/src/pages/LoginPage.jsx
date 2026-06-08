@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { loginRequest } from "../api/auth";
 import Logo from "../components/brand/Logo";
 import GlassButton from "../components/ui/GlassButton";
@@ -29,9 +29,10 @@ const highlights = [
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const token = useAuthStore((state) => state.token);
   const login = useAuthStore((state) => state.login);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(searchParams.get("email") || "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -51,7 +52,11 @@ export default function LoginPage() {
       navigate("/candidates");
     } catch (err) {
       const message = err.response?.data?.detail || "Login failed. Check your credentials.";
-      setError(typeof message === "string" ? message : "Login failed.");
+      const text = typeof message === "string" ? message : "Login failed.";
+      setError(text);
+      if (err.response?.status === 403) {
+        toast(text, "error");
+      }
     } finally {
       setLoading(false);
     }
@@ -123,11 +128,21 @@ export default function LoginPage() {
             />
 
             {error && (
-              <div className="glass-error flex items-center gap-2">
-                <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {error}
+              <div className="glass-error">
+                <div className="flex items-center gap-2">
+                  <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {error}
+                </div>
+                {error.toLowerCase().includes("verify") && (
+                  <Link
+                    to={`/register/check-email?email=${encodeURIComponent(email)}`}
+                    className="mt-2 inline-block text-sm font-semibold text-accent-glow hover:text-white"
+                  >
+                    Resend verification email
+                  </Link>
+                )}
               </div>
             )}
 
@@ -137,7 +152,13 @@ export default function LoginPage() {
           </form>
 
           <p className="mt-4 text-center text-sm text-white/50">
-            Looking to join the team?{" "}
+            New reviewer?{" "}
+            <Link to="/register" className="font-semibold text-accent-glow hover:text-white">
+              Create an account
+            </Link>
+          </p>
+          <p className="mt-2 text-center text-sm text-white/45">
+            Applying for a role?{" "}
             <Link to="/apply" className="font-semibold text-accent-glow hover:text-white">
               Submit an application
             </Link>

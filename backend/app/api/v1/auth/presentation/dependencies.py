@@ -6,6 +6,12 @@ from app.api.v1.auth.application.auth_service import AuthService
 from app.api.v1.auth.application.password_service import PasswordService
 from app.api.v1.auth.infrastructure.jwt import AuthUnitOfWork, JwtService, get_auth_uow
 from app.config import Settings, get_settings
+from app.shared.email_service import EmailService
+
+
+def get_email_service(settings: Settings = Depends(get_settings)) -> EmailService:
+    """Return the shared email service."""
+    return EmailService(settings)
 
 
 def get_jwt_service(settings: Settings = Depends(get_settings)) -> JwtService:
@@ -22,6 +28,8 @@ def get_auth_service(
     uow: AuthUnitOfWork = Depends(get_auth_uow),
     password_service: PasswordService = Depends(get_password_service),
     jwt_service: JwtService = Depends(get_jwt_service),
+    settings: Settings = Depends(get_settings),
+    email_service: EmailService = Depends(get_email_service),
 ) -> AuthService:
     """Return an auth service wired with its dependencies."""
-    return AuthService(uow, password_service, jwt_service)
+    return AuthService(uow, password_service, jwt_service, settings, email_service=email_service)

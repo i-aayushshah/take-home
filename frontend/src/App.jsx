@@ -6,6 +6,9 @@ import CandidateDetailPage from "./pages/CandidateDetailPage";
 import CandidateListPage from "./pages/CandidateListPage";
 import InterviewsPage from "./pages/InterviewsPage";
 import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import CheckEmailPage from "./pages/CheckEmailPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
 import ToastContainer from "./components/ui/ToastContainer";
 
 export default function App() {
@@ -14,6 +17,9 @@ export default function App() {
       <ToastContainer />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/register/check-email" element={<CheckEmailPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/apply" element={<ApplyPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>

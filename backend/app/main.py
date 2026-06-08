@@ -8,7 +8,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from app.api.v1.auth.domain.exceptions import InvalidCredentialsError, UserAlreadyExistsError
+from app.api.v1.auth.domain.exceptions import (
+    EmailNotVerifiedError,
+    InvalidCredentialsError,
+    InvalidVerificationTokenError,
+    UserAlreadyExistsError,
+)
 from app.api.v1.candidates.domain.exceptions import (
     AISummaryError,
     CandidateNotFoundError,
@@ -68,6 +73,16 @@ def create_app() -> FastAPI:
     async def handle_user_exists(_: Request, exc: UserAlreadyExistsError) -> JSONResponse:
         """Translate duplicate registration errors to HTTP 409."""
         return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+    @app.exception_handler(EmailNotVerifiedError)
+    async def handle_email_not_verified(_: Request, exc: EmailNotVerifiedError) -> JSONResponse:
+        """Translate unverified login attempts to HTTP 403."""
+        return JSONResponse(status_code=403, content={"detail": str(exc)})
+
+    @app.exception_handler(InvalidVerificationTokenError)
+    async def handle_invalid_verification(_: Request, exc: InvalidVerificationTokenError) -> JSONResponse:
+        """Translate bad verification tokens to HTTP 400."""
+        return JSONResponse(status_code=400, content={"detail": str(exc)})
 
     @app.exception_handler(CandidateNotFoundError)
     async def handle_candidate_not_found(_: Request, exc: CandidateNotFoundError) -> JSONResponse:

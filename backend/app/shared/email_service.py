@@ -17,6 +17,8 @@ from app.shared.email_templates import (
     reviewer_interview_email_subject,
     status_email_body,
     status_email_subject,
+    verification_email_body,
+    verification_email_subject,
 )
 
 logger = logging.getLogger(__name__)
@@ -29,6 +31,14 @@ class EmailService:
 
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
+
+    async def send_verification_email(self, to_address: str, verify_url: str) -> None:
+        """Send the reviewer email verification link."""
+        if not self._is_enabled():
+            return
+        subject = verification_email_subject()
+        html = verification_email_body(verify_url=verify_url)
+        await self._send_safe(to_address, subject, html)
 
     async def send_status_notification(
         self,

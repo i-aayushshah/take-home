@@ -21,6 +21,7 @@ os.environ.setdefault("POSTGRES_PORT", "5432")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-jwt")
 os.environ.setdefault("AI_SUMMARY_FALLBACK_MOCK", "true")
+os.environ.setdefault("EMAIL_ENABLED", "false")
 
 from app.api.v1.auth.application.password_service import PasswordService
 from app.api.v1.auth.domain.enums import Role
@@ -140,7 +141,13 @@ async def admin_headers(session_factory: async_sessionmaker[AsyncSession], clien
 
 async def register_and_login(client: AsyncClient, email: str, password: str = "password123") -> str:
     """Register a reviewer and return an access token."""
-    await client.post("/api/v1/auth/register", json={"email": email, "password": password})
+    register_response = await client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "password": password},
+    )
+    payload = register_response.json()
+    if payload.get("access_token"):
+        return payload["access_token"]
     response = await client.post("/api/v1/auth/login", json={"email": email, "password": password})
     return response.json()["access_token"]
 

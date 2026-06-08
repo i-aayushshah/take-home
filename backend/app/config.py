@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     ai_summary_fallback_mock: bool = True
     upload_dir: str = "uploads"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    public_app_url: str = ""
     email_enabled: bool = False
     smtp_host: str = ""
     smtp_port: int = 587

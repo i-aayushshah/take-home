@@ -34,8 +34,9 @@ Seed also loads **8 demo candidates** across `new`, `reviewed`, `hired`, and `re
 
 ### Self-registration (reviewer only)
 
-- **UI:** Login page → register flow, or `POST /api/v1/auth/register`
+- **UI:** [Login](https://pywithaayush.tech/login) → **Create an account** (`/register`), or `POST /api/v1/auth/register`
 - **Role:** Always `reviewer` — the API accepts only `email` + `password`; there is **no `role` field** and client-supplied roles are ignored
+- **Email verification:** When `EMAIL_ENABLED=true` and SMTP is configured, new reviewers must click the link sent to their inbox before signing in (`/verify-email`). Local dev skips verification when email is disabled.
 - **Admin accounts:** Seeded or created directly in the database — never via public registration
 
 ```bash
@@ -199,7 +200,7 @@ techkraft/
     │   ├── api/                # Axios client + endpoint modules
     │   ├── components/         # AISummaryPanel, ScoringForm, modals, …
     │   ├── hooks/              # TanStack Query hooks
-    │   ├── pages/              # Login, list, detail, apply, interviews
+    │   ├── pages/              # Login, register, list, detail, apply, interviews
     │   └── store/              # Zustand auth + toasts
     ├── Dockerfile              # Dev image
     └── Dockerfile.prod         # nginx static build
@@ -215,7 +216,7 @@ Each backend feature follows **domain → application → infrastructure → pre
 
 ![ERD diagram — placeholder](docs/erd.png)
 
-*ERD to be added. Core entities: `users`, `candidates`, `scores`, `audit_events`, `interviews`. Candidates soft-delete via `deleted_at`; scores belong to a candidate and reviewer (`users`).*
+*Core entities: `users`, `candidates`, `scores`, `audit_events`, `interviews`. Candidates soft-delete via `deleted_at`; scores belong to a candidate and reviewer (`users`).*
 
 ---
 

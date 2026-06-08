@@ -1,5 +1,7 @@
 """SQLAlchemy implementation of the user repository."""
 
+from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,6 +39,15 @@ class UserRepository(AbstractRepository[UserEntity]):
             return None
         return self._to_entity(model)
 
+    async def find_by_verify_token(self, token: str) -> UserEntity | None:
+        """Return the user matching a verification token or None."""
+        statement = select(UserModel).where(UserModel.email_verify_token == token)
+        result = await self._session.execute(statement)
+        model = result.scalar_one_or_none()
+        if model is None:
+            return None
+        return self._to_entity(model)
+
     async def save(self, entity: UserEntity) -> UserEntity:
         """Persist the user and return the saved entity."""
         model = await self._session.get(UserModel, entity.id)
@@ -46,12 +57,18 @@ class UserRepository(AbstractRepository[UserEntity]):
                 email=entity.email,
                 hashed_password=entity.hashed_password,
                 role=entity.role,
+                email_verified=entity.email_verified,
+                email_verify_token=entity.email_verify_token,
+                email_verify_expires_at=entity.email_verify_expires_at,
             )
             self._session.add(model)
         else:
             model.email = entity.email
             model.hashed_password = entity.hashed_password
             model.role = entity.role
+            model.email_verified = entity.email_verified
+            model.email_verify_token = entity.email_verify_token
+            model.email_verify_expires_at = entity.email_verify_expires_at
         await self._session.flush()
         return self._to_entity(model)
 
@@ -62,4 +79,7 @@ class UserRepository(AbstractRepository[UserEntity]):
             email=model.email,
             hashed_password=model.hashed_password,
             role=model.role,
+            email_verified=model.email_verified,
+            email_verify_token=model.email_verify_token,
+            email_verify_expires_at=model.email_verify_expires_at,
         )

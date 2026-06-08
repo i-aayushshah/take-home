@@ -210,3 +210,30 @@ def reviewer_interview_email_body(
         badge_color=BRAND["success"],
         body_html=body,
     )
+
+
+def verification_email_subject() -> str:
+    """Return the subject for a reviewer email verification message."""
+    return "TechKraft Recruit — Verify your email"
+
+
+def verification_email_body(*, verify_url: str) -> str:
+    """Return branded HTML for account email verification."""
+    body = (
+        f"<p style=\"margin:0 0 20px;color:{BRAND['muted']};\">"
+        f"Thanks for registering as a TechKraft reviewer. Confirm your email to sign in "
+        f"and start scoring candidates.</p>"
+        f'<p style="margin:0 0 24px;text-align:center;">'
+        f'<a href="{verify_url}" style="display:inline-block;padding:14px 28px;border-radius:10px;'
+        f"background:linear-gradient(135deg,{BRAND['accent_dark']},{BRAND['accent']});"
+        f'color:#ffffff;font-weight:700;text-decoration:none;">Verify email address</a></p>'
+        f'<p style="margin:0;font-size:13px;color:{BRAND["muted"]};">'
+        f"This link expires in 24 hours. If you did not create an account, you can ignore this email.</p>"
+    )
+    return _email_layout(
+        headline="Verify your reviewer account",
+        badge="Action required",
+        badge_color=BRAND["warning"],
+        body_html=body,
+        footer_note="TechKraft Recruiting · Account verification",
+    )

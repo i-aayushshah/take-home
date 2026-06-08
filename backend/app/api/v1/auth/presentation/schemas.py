@@ -24,6 +24,27 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class RegisterResponse(BaseModel):
+    """Registration outcome — may require email verification before login."""
+
+    message: str
+    requires_verification: bool = False
+    access_token: str | None = None
+    token_type: str = "bearer"
+
+
+class MessageResponse(BaseModel):
+    """Generic success message."""
+
+    message: str
+
+
+class ResendVerificationRequest(BaseModel):
+    """Payload to resend an email verification link."""
+
+    email: EmailStr
+
+
 class TeamMemberResponse(BaseModel):
     """Reviewer or admin available for interview assignment."""
 
