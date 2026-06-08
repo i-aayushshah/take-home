@@ -203,6 +203,19 @@
     @apply inline-flex items-center gap-1.5 text-sm font-medium text-white/50 transition hover:text-accent-glow;
   }
 
+  .mobile-topbar {
+    @apply rounded-2xl;
+  }
+
+  .mobile-icon-btn {
+    @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10
+           bg-white/5 text-white transition hover:border-white/20 hover:bg-white/10;
+  }
+
+  .mobile-logout-btn {
+    @apply !w-auto !px-3 !py-2 text-xs sm:!px-4 sm:text-sm;
+  }
+
   .profile-prose {
     @apply text-sm leading-7 text-white/75 sm:text-[15px] sm:leading-8;
   }

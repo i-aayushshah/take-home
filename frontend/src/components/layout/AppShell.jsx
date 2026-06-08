@@ -86,34 +86,44 @@ export default function AppShell() {
         )}
 
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
-          <header className="glass-panel sticky top-0 z-20 mx-3 mt-3 flex items-center justify-between gap-3 rounded-2xl px-4 py-3 sm:mx-4 sm:px-5">
-            <div className="flex min-w-0 items-center gap-3">
+          <header className="mobile-topbar glass-panel sticky top-0 z-20 mx-2 mt-2 sm:mx-4 sm:mt-3">
+            <div className="flex h-14 items-center gap-3 px-3 sm:h-auto sm:px-5 sm:py-3">
               <button
                 type="button"
-                className="glass-button-ghost !px-3 !py-2 lg:hidden"
+                className="mobile-icon-btn lg:hidden"
                 onClick={() => setMenuOpen((open) => !open)}
                 aria-label="Toggle menu"
+                aria-expanded={menuOpen}
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
-              <div className="min-w-0 lg:hidden">
-                <p className="truncate text-sm font-semibold text-white">{user?.email}</p>
-                <p className="text-xs text-white/45">Recruitment workspace</p>
-              </div>
-              <div className="hidden lg:block">
+
+              <Link to="/candidates" className="shrink-0 lg:hidden" onClick={() => setMenuOpen(false)}>
+                <Logo size="sm" showText={false} />
+              </Link>
+
+              <div className="hidden min-w-0 flex-1 lg:block">
                 <p className="text-sm font-semibold text-white">Recruitment Dashboard</p>
                 <p className="text-xs text-white/45">Review, score, and summarize candidates</p>
               </div>
-            </div>
 
-            <GlassButton variant="ghost" onClick={logout} className="shrink-0">
-              Logout
-            </GlassButton>
+              <p className="min-w-0 flex-1 truncate text-sm font-semibold text-white lg:hidden">
+                Candidates
+              </p>
+
+              <GlassButton
+                variant="ghost"
+                onClick={logout}
+                className="mobile-logout-btn shrink-0"
+              >
+                Logout
+              </GlassButton>
+            </div>
           </header>
 
-          <main className="page-enter mx-auto w-full max-w-7xl flex-1 px-3 py-5 sm:px-5 sm:py-6 lg:px-6">
+          <main className="page-enter mx-auto w-full max-w-7xl flex-1 px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
             <Outlet />
           </main>
         </div>
