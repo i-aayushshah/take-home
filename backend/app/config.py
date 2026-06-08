@@ -25,12 +25,19 @@ class Settings(BaseSettings):
     github_token: str = ""
     github_model: str = "openai/gpt-4o-mini"
     ai_summary_fallback_mock: bool = True
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
     model_config = SettingsConfigDict(
         env_file=str(_ROOT_DIR / ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @computed_field
+    @property
+    def cors_origin_list(self) -> list[str]:
+        """Return parsed CORS allowed origins from a comma-separated env value."""
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
     @computed_field
     @property

@@ -3,6 +3,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
@@ -31,7 +32,15 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     """Construct and configure the FastAPI application."""
+    settings = get_settings()
     app = FastAPI(title="TechKraft Recruitment Dashboard", lifespan=lifespan)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origin_list,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     app.include_router(v1_router)
 
     @app.get("/health")
