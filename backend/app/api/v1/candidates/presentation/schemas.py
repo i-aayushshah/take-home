@@ -32,6 +32,16 @@ class CandidateListItemResponse(BaseModel):
     created_at: datetime
 
 
+class WorkExperienceResponse(BaseModel):
+    """Serialized work history entry."""
+
+    company: str
+    title: str
+    start: str
+    end: str | None = None
+    summary: str | None = None
+
+
 class CandidateDetailResponse(BaseModel):
     """Serialized candidate detail with scores and optional summary."""
 
@@ -41,6 +51,8 @@ class CandidateDetailResponse(BaseModel):
     role_applied: str
     status: str
     skills: list[str]
+    description: str | None = None
+    work_experience: list[WorkExperienceResponse] = []
     ai_summary: str | None
     internal_notes: str | None = None
     scores: list[ScoreResponse]
@@ -111,6 +123,17 @@ def to_detail_response(entity: CandidateAggregate) -> CandidateDetailResponse:
         role_applied=entity.role_applied,
         status=entity.status.value,
         skills=entity.skills,
+        description=entity.description,
+        work_experience=[
+            WorkExperienceResponse(
+                company=entry.company,
+                title=entry.title,
+                start=entry.start,
+                end=entry.end,
+                summary=entry.summary,
+            )
+            for entry in entity.work_experience
+        ],
         ai_summary=entity.ai_summary,
         internal_notes=entity.internal_notes,
         scores=[to_score_response(score) for score in entity.scores],
