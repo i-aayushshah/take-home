@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.api.v1.auth.domain.exceptions import InvalidCredentialsError, UserAlreadyExistsError
+from app.api.v1.candidates.domain.exceptions import CandidateNotFoundError, InvalidScoreError
 from app.api.v1.router import router as v1_router
 from app.config import get_settings
 from app.seed import seed_database
@@ -47,6 +48,16 @@ def create_app() -> FastAPI:
     async def handle_user_exists(_: Request, exc: UserAlreadyExistsError) -> JSONResponse:
         """Translate duplicate registration errors to HTTP 409."""
         return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+    @app.exception_handler(CandidateNotFoundError)
+    async def handle_candidate_not_found(_: Request, exc: CandidateNotFoundError) -> JSONResponse:
+        """Translate missing candidate errors to HTTP 404."""
+        return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+    @app.exception_handler(InvalidScoreError)
+    async def handle_invalid_score(_: Request, exc: InvalidScoreError) -> JSONResponse:
+        """Translate invalid score errors to HTTP 400."""
+        return JSONResponse(status_code=400, content={"detail": str(exc)})
 
     return app
 

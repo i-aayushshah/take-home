@@ -1,0 +1,23 @@
+"""Candidate unit of work coordinating repositories."""
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.v1.candidates.infrastructure.candidate_repository import CandidateRepository
+from app.api.v1.candidates.infrastructure.score_repository import ScoreRepository
+
+
+class CandidateUnitOfWork:
+    """Coordinates candidate and score repositories under one session."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+        self.candidates = CandidateRepository(session)
+        self.scores = ScoreRepository(session)
+
+    async def commit(self) -> None:
+        """Flush and commit the current transaction."""
+        await self._session.commit()
+
+    async def rollback(self) -> None:
+        """Roll back the current transaction."""
+        await self._session.rollback()

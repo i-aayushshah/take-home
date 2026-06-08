@@ -25,5 +25,6 @@ class CandidateModel(Base):
     status: Mapped[CandidateStatus] = mapped_column(SAEnum(CandidateStatus), nullable=False)
     skills: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     internal_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ai_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
