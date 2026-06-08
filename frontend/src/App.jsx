@@ -1,12 +1,21 @@
-function App() {
-  return (
-    <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-3xl font-semibold mb-2">TechKraft Recruitment Dashboard</h1>
-        <p className="text-white/60">Phase 01 scaffolding complete — frontend ready.</p>
-      </div>
-    </div>
-  )
-}
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import AppShell from "./components/layout/AppShell";
+import ProtectedRoute from "./components/layout/ProtectedRoute";
+import CandidateListPage from "./pages/CandidateListPage";
+import LoginPage from "./pages/LoginPage";
 
-export default App
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AppShell />}>
+            <Route path="/candidates" element={<CandidateListPage />} />
+          </Route>
+        </Route>
+        <Route path="*" element={<Navigate to="/candidates" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}

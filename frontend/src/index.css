@@ -1,6 +1,158 @@
 @import "tailwindcss";
 
-body {
-  margin: 0;
-  min-height: 100vh;
+@theme {
+  --font-sans: "Nunito", system-ui, sans-serif;
+
+  --color-surface-900: #0f0f1a;
+  --color-surface-800: #1a1a2e;
+  --color-surface-700: #16213e;
+
+  --color-glass-bg: rgba(255, 255, 255, 0.08);
+  --color-glass-border: rgba(255, 255, 255, 0.18);
+  --color-glass-highlight: rgba(255, 255, 255, 0.25);
+
+  --color-accent-primary: #6366f1;
+  --color-accent-glow: #818cf8;
+  --color-accent-success: #34d399;
+  --color-accent-danger: #f87171;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+  }
+
+  body {
+    @apply min-h-screen bg-surface-900 text-white antialiased;
+    margin: 0;
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(129, 140, 248, 0.1) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 80%, rgba(52, 211, 153, 0.08) 0%, transparent 50%);
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-glass-bg backdrop-blur-xl border border-glass-border rounded-2xl shadow-xl;
+  }
+
+  .glass-card {
+    @apply bg-glass-bg backdrop-blur-xl border border-glass-border rounded-2xl shadow-xl
+           p-4 sm:p-6 transition-all duration-300 hover:bg-glass-highlight;
+  }
+
+  .field {
+    @apply relative flex h-12 w-full items-center overflow-hidden rounded-lg
+           border border-white/[0.12] bg-[#141422] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]
+           transition duration-200;
+  }
+
+  .field:focus-within {
+    @apply border-accent-primary/70 ring-2 ring-accent-primary/20;
+  }
+
+  .field-input {
+    @apply h-full w-full border-0 bg-transparent text-[15px] text-white outline-none
+           placeholder:text-white/35;
+  }
+
+  .field-input-icon-left {
+    @apply pl-11 pr-4;
+  }
+
+  .field-input:not(.field-input-icon-left):not(.field-input-action-right) {
+    @apply px-4;
+  }
+
+  .field-input-action-right {
+    @apply pl-4 pr-12;
+  }
+
+  .field-input:-webkit-autofill,
+  .field-input:-webkit-autofill:hover,
+  .field-input:-webkit-autofill:focus,
+  .field-input:-webkit-autofill:active {
+    -webkit-text-fill-color: #ffffff;
+    caret-color: #ffffff;
+    box-shadow: 0 0 0 1000px #141422 inset;
+    -webkit-box-shadow: 0 0 0 1000px #141422 inset;
+    transition: background-color 9999s ease-in-out 0s;
+  }
+
+  .field-icon-left {
+    @apply pointer-events-none absolute inset-y-0 left-0 flex w-11 items-center justify-center text-white/40;
+  }
+
+  .field-action-right {
+    @apply absolute inset-y-0 right-0 flex w-11 items-center justify-center
+           text-white/45 transition-colors hover:text-white;
+  }
+
+  .glass-input {
+    @apply w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3
+           text-white placeholder-white/40 focus:border-accent-primary focus:ring-1
+           focus:ring-accent-primary outline-none transition text-base;
+  }
+
+  .glass-button {
+    @apply inline-flex items-center justify-center gap-2 bg-accent-primary/80 backdrop-blur-sm
+           border border-white/20 rounded-xl px-6 py-3 font-semibold text-white
+           hover:bg-accent-primary active:scale-[0.98] transition-all duration-200
+           disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+
+  .glass-button-ghost {
+    @apply inline-flex items-center justify-center gap-2 bg-white/5 backdrop-blur-sm
+           border border-white/10 rounded-xl px-4 py-2 text-white/80 hover:bg-white/10 transition;
+  }
+
+  .glass-error {
+    @apply bg-accent-danger/10 border border-accent-danger/50 text-accent-danger rounded-xl px-4 py-3 text-sm;
+  }
+
+  .orb {
+    @apply absolute rounded-full blur-3xl opacity-30 pointer-events-none;
+    animation: float 8s ease-in-out infinite;
+  }
+
+  .orb-delayed {
+    animation-delay: 4s;
+  }
+
+  .login-page {
+    background:
+      radial-gradient(circle at top right, rgba(99, 102, 241, 0.18), transparent 35%),
+      radial-gradient(circle at bottom left, rgba(52, 211, 153, 0.12), transparent 30%),
+      #0f0f1a;
+  }
+
+  .login-grid {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 42px 42px;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+  }
+
+  .login-card {
+    @apply bg-glass-bg backdrop-blur-2xl border border-glass-border rounded-3xl shadow-2xl;
+    box-shadow:
+      0 25px 50px -12px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-20px) scale(1.05);
+  }
 }

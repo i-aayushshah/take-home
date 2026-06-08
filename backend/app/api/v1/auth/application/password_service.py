@@ -1,8 +1,6 @@
 """Password hashing and verification."""
 
-from passlib.context import CryptContext
-
-_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import bcrypt
 
 
 class PasswordService:
@@ -10,8 +8,13 @@ class PasswordService:
 
     def hash_password(self, plain_password: str) -> str:
         """Return a bcrypt hash for the given plain-text password."""
-        return _context.hash(plain_password)
+        salt = bcrypt.gensalt()
+        hashed = bcrypt.hashpw(plain_password.encode("utf-8"), salt)
+        return hashed.decode("utf-8")
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """Return True when the plain password matches the stored hash."""
-        return _context.verify(plain_password, hashed_password)
+        return bcrypt.checkpw(
+            plain_password.encode("utf-8"),
+            hashed_password.encode("utf-8"),
+        )
