@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { loginRequest } from "../api/auth";
 import Logo from "../components/brand/Logo";
 import GlassButton from "../components/ui/GlassButton";
@@ -133,6 +133,13 @@ export default function LoginPage() {
               Sign in to dashboard
             </GlassButton>
           </form>
+
+          <p className="mt-4 text-center text-sm text-white/50">
+            Looking to join the team?{" "}
+            <Link to="/apply" className="font-semibold text-accent-glow hover:text-white">
+              Submit an application
+            </Link>
+          </p>
 
           <div className="mt-6 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-white/45">Demo accounts</p>

@@ -51,3 +51,26 @@ class ResumeService:
         """Return the absolute resume path when the file exists."""
         path = self._candidate_dir(candidate_id) / filename
         return path if path.is_file() else None
+
+    def extract_text(self, candidate_id: str, filename: str) -> str:
+        """Extract plain text from a stored resume for AI parsing.
+
+        Raises:
+            ValueError: When the file is missing or format is unsupported.
+        """
+        path = self.resolve_resume_path(candidate_id, filename)
+        if path is None:
+            raise ValueError("Resume file missing on disk.")
+
+        suffix = path.suffix.lower()
+        if suffix != ".pdf":
+            raise ValueError("AI resume parse supports PDF files only.")
+
+        from pypdf import PdfReader
+
+        reader = PdfReader(str(path))
+        pages = [page.extract_text() or "" for page in reader.pages]
+        text = "\n".join(pages).strip()
+        if not text:
+            raise ValueError("Could not extract text from the PDF resume.")
+        return text

@@ -238,6 +238,32 @@ docker compose up --build -d
 docker compose exec backend uv run alembic upgrade head
 ```
 
+## Extension features
+
+| Feature | Endpoint / route | Notes |
+|---|---|---|
+| Public apply | `POST /api/v1/applications`, `/apply` | No auth; rate-limited (5/min per IP); optional resume upload |
+| Email notifications | Hooked in `update_status` / auto-review | Set `EMAIL_ENABLED=true` + SMTP vars; logs when disabled |
+| Interview scheduling | `/api/v1/interviews`, `/interviews` | Admin calendar + per-candidate schedule panel |
+| Resume AI parse | `POST /api/v1/candidates/{id}/parse-resume` | PDF only; mock or GitHub Models; review before save |
+| Audit log | `GET /api/v1/candidates/{id}/audit` | Admin Activity tab on candidate detail |
+
+```bash
+# Public application (multipart)
+curl -X POST http://localhost:8000/api/v1/applications \
+  -F "name=Alex Kim" \
+  -F "email=alex@example.com" \
+  -F "role_applied=Backend Engineer" \
+  -F "skills=Python,FastAPI" \
+  -F "resume=@./resume.pdf"
+
+# Enable SMTP emails in .env
+EMAIL_ENABLED=true
+SMTP_HOST=smtp.example.com
+SMTP_USER=...
+SMTP_PASSWORD=...
+```
+
 ## Known limitations
 
 - SSE uses in-memory queues (not Redis pub/sub) — fine for dev, not multi-instance production

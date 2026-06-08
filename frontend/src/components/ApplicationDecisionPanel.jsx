@@ -15,7 +15,7 @@ const STATUS_OPTIONS = [
 export default function ApplicationDecisionPanel({ candidateId, currentStatus, rejectionReason }) {
   const [status, setStatus] = useState(currentStatus);
   const [reason, setReason] = useState(rejectionReason || "");
-  const { mutate, isPending, isError, error, isSuccess } = useUpdateStatus(candidateId);
+  const { mutate, isPending, isError, error } = useUpdateStatus(candidateId);
 
   useEffect(() => {
     setStatus(currentStatus);
@@ -79,7 +79,6 @@ export default function ApplicationDecisionPanel({ candidateId, currentStatus, r
         {isError && (
           <p className="text-sm text-accent-danger">{error?.response?.data?.detail || "Failed to update status."}</p>
         )}
-        {isSuccess && <p className="text-sm text-accent-success">Hiring decision saved.</p>}
 
         <GlassButton onClick={handleSave} loading={isPending} className="w-full sm:w-auto">
           Save Decision

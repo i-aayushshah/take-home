@@ -62,3 +62,18 @@ export async function downloadResume(id) {
 export function getCandidateStreamUrl(id) {
   return `${API_BASE}/api/v1/candidates/${id}/stream`;
 }
+
+export async function fetchAuditEvents(id) {
+  const { data } = await client.get(`/api/v1/candidates/${id}/audit`);
+  return data;
+}
+
+export async function parseResume(id) {
+  const { data } = await client.post(`/api/v1/candidates/${id}/parse-resume`);
+  return data;
+}
+
+export async function updateProfile(id, payload) {
+  const { data } = await client.patch(`/api/v1/candidates/${id}/profile`, payload);
+  return data;
+}

@@ -3,6 +3,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.auth.domain.enums import Role
 from app.api.v1.auth.domain.user import UserEntity
 from app.db.models.user import UserModel
 from app.shared.base_repository import AbstractRepository
@@ -20,6 +21,12 @@ class UserRepository(AbstractRepository[UserEntity]):
         if model is None:
             return None
         return self._to_entity(model)
+
+    async def list_team_members(self) -> list[UserEntity]:
+        """Return users who can conduct interviews."""
+        statement = select(UserModel).where(UserModel.role.in_([Role.REVIEWER, Role.ADMIN])).order_by(UserModel.email)
+        result = await self._session.execute(statement)
+        return [self._to_entity(model) for model in result.scalars().all()]
 
     async def find_by_email(self, email: str) -> UserEntity | None:
         """Return the user with the given email or None."""

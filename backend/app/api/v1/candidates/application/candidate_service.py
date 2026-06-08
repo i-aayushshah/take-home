@@ -3,7 +3,7 @@
 import uuid
 from dataclasses import replace
 
-from app.api.v1.candidates.domain.candidate import CandidateAggregate, CandidateFilters
+from app.api.v1.candidates.domain.candidate import CandidateAggregate, CandidateFilters, WorkExperienceEntry
 from app.api.v1.candidates.domain.enums import CandidateStatus
 from app.api.v1.candidates.domain.exceptions import (
     CandidateNotFoundError,
@@ -11,6 +11,7 @@ from app.api.v1.candidates.domain.exceptions import (
     InvalidStatusError,
 )
 from app.api.v1.candidates.infrastructure.unit_of_work import CandidateUnitOfWork
+from app.shared.email_service import EmailService
 from app.shared.pagination import PaginatedResult, normalize_pagination
 from app.shared.time import utc_now
 
@@ -18,8 +19,9 @@ from app.shared.time import utc_now
 class CandidateService:
     """Orchestrates candidate list, detail, notes, and soft-delete flows."""
 
-    def __init__(self, uow: CandidateUnitOfWork) -> None:
+    def __init__(self, uow: CandidateUnitOfWork, email_service: EmailService | None = None) -> None:
         self._uow = uow
+        self._email = email_service
 
     async def list_candidates(
         self,
@@ -67,6 +69,8 @@ class CandidateService:
         role_applied: str,
         skills: list[str],
         description: str | None = None,
+        actor_id: str | None = None,
+        source: str = "admin",
     ) -> CandidateAggregate:
         """Create a new application in the pipeline."""
         existing = await self._uow.candidates.find_by_email(email)
@@ -89,6 +93,12 @@ class CandidateService:
             created_at=utc_now(),
         )
         saved = await self._uow.candidates.create(entity)
+        await self._uow.audit.append(
+            actor_id=actor_id,
+            candidate_id=saved.id,
+            action="application_submitted" if source == "public" else "candidate_created",
+            payload={"email": email, "role_applied": role_applied, "source": source},
+        )
         await self._uow.commit()
         return saved
 
@@ -97,11 +107,15 @@ class CandidateService:
         candidate_id: str,
         status: CandidateStatus,
         rejection_reason: str | None,
+        *,
+        actor_id: str | None = None,
     ) -> CandidateAggregate:
         """Update hiring decision status for a candidate."""
         candidate = await self._uow.candidates.get_by_id(candidate_id)
         if candidate is None:
             raise CandidateNotFoundError(f"Candidate not found: {candidate_id}")
+
+        previous_status = candidate.status
 
         if status == CandidateStatus.REJECTED:
             if not rejection_reason or len(rejection_reason.strip()) < 10:
@@ -112,16 +126,38 @@ class CandidateService:
 
         updated = replace(candidate, status=status, rejection_reason=reason)
         saved = await self._uow.candidates.save(updated)
+        await self._uow.audit.append(
+            actor_id=actor_id,
+            candidate_id=candidate_id,
+            action="status_changed",
+            payload={"from": previous_status.value, "to": status.value},
+        )
         await self._uow.commit()
+
+        if self._email and previous_status != status:
+            await self._email.send_status_notification(saved, status)
+
         return saved
 
-    async def attach_resume(self, candidate_id: str, filename: str) -> CandidateAggregate:
+    async def attach_resume(
+        self,
+        candidate_id: str,
+        filename: str,
+        *,
+        actor_id: str | None = None,
+    ) -> CandidateAggregate:
         """Persist resume filename metadata for a candidate."""
         candidate = await self._uow.candidates.get_by_id(candidate_id)
         if candidate is None:
             raise CandidateNotFoundError(f"Candidate not found: {candidate_id}")
         updated = replace(candidate, resume_filename=filename)
         saved = await self._uow.candidates.save(updated)
+        await self._uow.audit.append(
+            actor_id=actor_id,
+            candidate_id=candidate_id,
+            action="resume_uploaded",
+            payload={"filename": filename},
+        )
         await self._uow.commit()
         return saved
 
@@ -131,23 +167,78 @@ class CandidateService:
         if candidate is None or candidate.status != CandidateStatus.NEW:
             return
         updated = replace(candidate, status=CandidateStatus.REVIEWED)
-        await self._uow.candidates.save(updated)
+        saved = await self._uow.candidates.save(updated)
+        await self._uow.audit.append(
+            actor_id=None,
+            candidate_id=candidate_id,
+            action="status_changed",
+            payload={"from": CandidateStatus.NEW.value, "to": CandidateStatus.REVIEWED.value, "auto": True},
+        )
         await self._uow.commit()
+        if self._email:
+            await self._email.send_status_notification(saved, CandidateStatus.REVIEWED)
 
-    async def update_internal_notes(self, candidate_id: str, notes: str | None) -> CandidateAggregate:
+    async def update_internal_notes(
+        self,
+        candidate_id: str,
+        notes: str | None,
+        *,
+        actor_id: str | None = None,
+    ) -> CandidateAggregate:
         """Update admin-only internal notes for a candidate."""
         candidate = await self._uow.candidates.get_by_id(candidate_id)
         if candidate is None:
             raise CandidateNotFoundError(f"Candidate not found: {candidate_id}")
         updated = replace(candidate, internal_notes=notes)
         saved = await self._uow.candidates.save(updated)
+        await self._uow.audit.append(
+            actor_id=actor_id,
+            candidate_id=candidate_id,
+            action="notes_updated",
+            payload={"has_notes": bool(notes and notes.strip())},
+        )
         await self._uow.commit()
         return saved
 
-    async def soft_delete_candidate(self, candidate_id: str) -> None:
+    async def update_profile(
+        self,
+        candidate_id: str,
+        *,
+        skills: list[str],
+        description: str | None,
+        work_experience: tuple[WorkExperienceEntry, ...],
+        actor_id: str | None = None,
+    ) -> CandidateAggregate:
+        """Update candidate profile fields (skills, description, work history)."""
+        candidate = await self._uow.candidates.get_by_id(candidate_id)
+        if candidate is None:
+            raise CandidateNotFoundError(f"Candidate not found: {candidate_id}")
+        updated = replace(
+            candidate,
+            skills=skills,
+            description=description,
+            work_experience=work_experience,
+        )
+        saved = await self._uow.candidates.save(updated)
+        await self._uow.audit.append(
+            actor_id=actor_id,
+            candidate_id=candidate_id,
+            action="profile_updated",
+            payload={"skills_count": len(skills), "experience_count": len(work_experience)},
+        )
+        await self._uow.commit()
+        return saved
+
+    async def soft_delete_candidate(self, candidate_id: str, *, actor_id: str | None = None) -> None:
         """Soft-delete a candidate by setting deleted_at."""
         candidate = await self._uow.candidates.get_by_id(candidate_id)
         if candidate is None:
             raise CandidateNotFoundError(f"Candidate not found: {candidate_id}")
         await self._uow.candidates.soft_delete(candidate_id)
+        await self._uow.audit.append(
+            actor_id=actor_id,
+            candidate_id=candidate_id,
+            action="soft_deleted",
+            payload={},
+        )
         await self._uow.commit()

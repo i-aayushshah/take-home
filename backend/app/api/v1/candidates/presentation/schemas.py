@@ -107,6 +107,46 @@ class UpdateNotesRequest(BaseModel):
     internal_notes: str | None = None
 
 
+class ApplicationSubmittedResponse(BaseModel):
+    """Public confirmation after a self-service application."""
+
+    id: str
+    message: str
+
+
+class AuditEventResponse(BaseModel):
+    """Serialized audit event."""
+
+    id: str
+    actor_id: str | None
+    candidate_id: str
+    action: str
+    payload: dict
+    created_at: datetime
+
+
+class AuditEventListResponse(BaseModel):
+    """List of audit events for a candidate."""
+
+    items: list[AuditEventResponse]
+
+
+class ParseResumeResponse(BaseModel):
+    """AI-extracted resume fields for admin review."""
+
+    skills: list[str]
+    description: str | None
+    work_experience: list[WorkExperienceResponse]
+
+
+class UpdateProfileRequest(BaseModel):
+    """Payload for applying parsed or edited profile fields."""
+
+    skills: list[str] = Field(min_length=1)
+    description: str | None = None
+    work_experience: list[WorkExperienceResponse] = []
+
+
 def to_score_response(entity: ScoreEntity) -> ScoreResponse:
     """Map a score entity to its response schema."""
     return ScoreResponse(
@@ -129,6 +169,18 @@ def to_list_item(entity: CandidateAggregate) -> CandidateListItemResponse:
         role_applied=entity.role_applied,
         status=entity.status.value,
         skills=entity.skills,
+        created_at=entity.created_at,
+    )
+
+
+def to_audit_response(entity) -> AuditEventResponse:
+    """Map an audit event entity to its response schema."""
+    return AuditEventResponse(
+        id=entity.id,
+        actor_id=entity.actor_id,
+        candidate_id=entity.candidate_id,
+        action=entity.action,
+        payload=entity.payload,
         created_at=entity.created_at,
     )
 

@@ -4,7 +4,14 @@ from fastapi import APIRouter, Depends
 
 from app.api.v1.auth.application.auth_service import AuthService
 from app.api.v1.auth.presentation.dependencies import get_auth_service
-from app.api.v1.auth.presentation.schemas import LoginRequest, RegisterRequest, TokenResponse
+from app.api.v1.auth.presentation.schemas import (
+    LoginRequest,
+    RegisterRequest,
+    TeamListResponse,
+    TeamMemberResponse,
+    TokenResponse,
+)
+from app.api.v1.dependencies import require_admin
 from app.shared.rate_limiter import RateLimiter
 
 _login_limiter = RateLimiter(max_requests=10, window_seconds=60)
@@ -25,3 +32,18 @@ async def login(body: LoginRequest, auth_service: AuthService = Depends(get_auth
     """Authenticate a user and return an access token."""
     token = await auth_service.login(body.email, body.password)
     return TokenResponse(access_token=token)
+
+
+@router.get("/team", response_model=TeamListResponse)
+async def list_team(
+    _: object = Depends(require_admin),
+    auth_service: AuthService = Depends(get_auth_service),
+) -> TeamListResponse:
+    """List reviewers and admins for interview scheduling (admin only)."""
+    members = await auth_service.list_team_members()
+    return TeamListResponse(
+        items=[
+            TeamMemberResponse(id=member.id, email=member.email, role=member.role.value)
+            for member in members
+        ]
+    )

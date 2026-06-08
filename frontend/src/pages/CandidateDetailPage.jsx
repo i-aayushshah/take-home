@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import AISummaryPanel from "../components/AISummaryPanel";
 import ApplicationDecisionPanel from "../components/ApplicationDecisionPanel";
+import AuditActivityPanel from "../components/AuditActivityPanel";
+import InterviewSchedulePanel from "../components/InterviewSchedulePanel";
 import InternalNotesPanel from "../components/InternalNotesPanel";
 import ResumePanel from "../components/ResumePanel";
 import ScoringForm from "../components/ScoringForm";
@@ -268,6 +270,8 @@ export default function CandidateDetailPage() {
             rejectionReason={candidate.rejection_reason}
           />
           <InternalNotesPanel candidateId={candidate.id} initialNotes={candidate.internal_notes} />
+          <InterviewSchedulePanel candidateId={candidate.id} />
+          <AuditActivityPanel candidateId={candidate.id} />
           <div className="flex justify-end">
             <GlassButton variant="ghost" onClick={() => setDeleteOpen(true)} className="!border-red-400/30 !text-red-200">
               Remove Candidate
