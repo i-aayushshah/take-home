@@ -4,6 +4,7 @@ import uuid
 from dataclasses import replace
 from datetime import datetime
 
+from app.api.v1.auth.infrastructure.user_repository import UserRepository
 from app.api.v1.candidates.domain.exceptions import CandidateNotFoundError
 from app.api.v1.candidates.infrastructure.unit_of_work import CandidateUnitOfWork
 from app.api.v1.interviews.domain.interview import InterviewEntity
@@ -16,9 +17,53 @@ ALLOWED_TYPES = {"video", "in_person", "phone"}
 class InterviewService:
     """Schedules and manages candidate interviews."""
 
-    def __init__(self, uow: CandidateUnitOfWork, email_service: EmailService | None = None) -> None:
+    def __init__(
+        self,
+        uow: CandidateUnitOfWork,
+        email_service: EmailService | None = None,
+        users: UserRepository | None = None,
+    ) -> None:
         self._uow = uow
         self._email = email_service
+        self._users = users
+
+    async def _notify_interview_participants(
+        self,
+        *,
+        candidate_id: str,
+        reviewer_id: str,
+        scheduled_at: datetime,
+        interview_type: str,
+        location_or_link: str | None,
+        notes: str | None,
+        updated: bool,
+    ) -> None:
+        """Send interview emails to the candidate and assigned reviewer."""
+        if not self._email:
+            return
+
+        candidate = await self._uow.candidates.get_by_id(candidate_id)
+        if candidate is None:
+            return
+
+        reviewer_email = None
+        reviewer_name = None
+        if self._users:
+            reviewer = await self._users.get_by_id(reviewer_id)
+            if reviewer is not None:
+                reviewer_email = reviewer.email
+                reviewer_name = reviewer.email.split("@")[0]
+
+        await self._email.send_interview_notification(
+            candidate=candidate,
+            reviewer_email=reviewer_email,
+            reviewer_name=reviewer_name,
+            scheduled_at=scheduled_at,
+            interview_type=interview_type,
+            location_or_link=location_or_link,
+            notes=notes,
+            updated=updated,
+        )
 
     async def schedule_interview(
         self,
@@ -63,14 +108,15 @@ class InterviewService:
         )
         await self._uow.commit()
 
-        if self._email:
-            await self._email.send_interview_notification(
-                candidate=candidate,
-                scheduled_at=saved.scheduled_at,
-                interview_type=saved.interview_type,
-                location_or_link=saved.location_or_link,
-                notes=saved.notes,
-            )
+        await self._notify_interview_participants(
+            candidate_id=candidate_id,
+            reviewer_id=reviewer_id,
+            scheduled_at=saved.scheduled_at,
+            interview_type=saved.interview_type,
+            location_or_link=saved.location_or_link,
+            notes=saved.notes,
+            updated=False,
+        )
 
         return saved
 
@@ -119,15 +165,15 @@ class InterviewService:
         )
         await self._uow.commit()
 
-        if self._email:
-            await self._email.send_interview_notification(
-                candidate=candidate,
-                scheduled_at=saved.scheduled_at,
-                interview_type=saved.interview_type,
-                location_or_link=saved.location_or_link,
-                notes=saved.notes,
-                updated=True,
-            )
+        await self._notify_interview_participants(
+            candidate_id=interview.candidate_id,
+            reviewer_id=reviewer_id,
+            scheduled_at=saved.scheduled_at,
+            interview_type=saved.interview_type,
+            location_or_link=saved.location_or_link,
+            notes=saved.notes,
+            updated=True,
+        )
 
         return saved
 

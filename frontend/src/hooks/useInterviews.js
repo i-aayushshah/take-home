@@ -32,7 +32,7 @@ export function useScheduleInterview(candidateId) {
       queryClient.invalidateQueries({ queryKey: ["interviews", candidateId] });
       queryClient.invalidateQueries({ queryKey: ["interviews-calendar"] });
       queryClient.invalidateQueries({ queryKey: ["audit", candidateId] });
-      toast("Interview scheduled — confirmation email sent.");
+      toast("Interview scheduled — candidate and reviewer notified by email.");
     },
     onError: (error) => {
       toast(error?.response?.data?.detail || "Failed to schedule interview.", "error");
@@ -48,7 +48,7 @@ export function useUpdateInterview(candidateId) {
       queryClient.invalidateQueries({ queryKey: ["interviews", candidateId] });
       queryClient.invalidateQueries({ queryKey: ["interviews-calendar"] });
       queryClient.invalidateQueries({ queryKey: ["audit", candidateId] });
-      toast("Interview updated — candidate notified by email.");
+      toast("Interview updated — candidate and reviewer notified by email.");
     },
     onError: (error) => {
       toast(error?.response?.data?.detail || "Failed to update interview.", "error");

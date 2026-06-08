@@ -1,6 +1,6 @@
 import client from "./client";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_URL || (typeof window !== "undefined" ? window.location.origin : "http://localhost:8000");
 
 export async function fetchCandidates(filters) {
   const { data } = await client.get("/api/v1/candidates", { params: filters });

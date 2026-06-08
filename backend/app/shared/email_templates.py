@@ -161,3 +161,52 @@ def interview_email_body(
         badge_color=BRAND["accent_dark"],
         body_html=body,
     )
+
+
+def reviewer_interview_email_subject(candidate_name: str, *, updated: bool = False) -> str:
+    """Return the subject for a reviewer assignment email."""
+    action = "Interview updated" if updated else "New interview"
+    return f"TechKraft Recruit — {action}: {candidate_name}"
+
+
+def reviewer_interview_email_body(
+    *,
+    reviewer_name: str,
+    candidate_name: str,
+    candidate_email: str,
+    role_applied: str,
+    scheduled_at: str,
+    interview_type: str,
+    location_or_link: str | None,
+    notes: str | None,
+    updated: bool = False,
+) -> str:
+    """Return branded HTML for interviewer assignment."""
+    type_label = interview_type.replace("_", " ").title()
+    badge = "Assignment updated" if updated else "New assignment"
+    headline = f"{'Updated' if updated else 'Scheduled'} interview — {candidate_name}"
+
+    body = (
+        f"<p style=\"margin:0 0 20px;\">Hi <strong style=\"color:{BRAND['text']};\">{reviewer_name}</strong>, "
+        f"you are assigned to interview <strong style=\"color:{BRAND['text']};\">{candidate_name}</strong> "
+        f"for the <strong style=\"color:{BRAND['text']};\">{role_applied}</strong> role.</p>"
+        f"{_detail_row('Candidate email', candidate_email)}"
+        f"{_detail_row('When', scheduled_at)}"
+        f"{_detail_row('Format', type_label)}"
+    )
+    if location_or_link:
+        body += _detail_row("Location / link", location_or_link)
+    if notes:
+        body += _detail_row("Notes", notes)
+    body += (
+        f'<p style="margin:16px 0 0;padding:14px 16px;border-radius:10px;'
+        f'background:#141424;border:1px solid {BRAND["card_border"]};color:{BRAND["muted"]};">'
+        f"Log in to the TechKraft dashboard to view the full candidate profile.</p>"
+    )
+
+    return _email_layout(
+        headline=headline,
+        badge=badge,
+        badge_color=BRAND["success"],
+        body_html=body,
+    )

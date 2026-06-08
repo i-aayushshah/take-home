@@ -13,6 +13,8 @@ from app.config import Settings
 from app.shared.email_templates import (
     interview_email_body,
     interview_email_subject,
+    reviewer_interview_email_body,
+    reviewer_interview_email_subject,
     status_email_body,
     status_email_subject,
 )
@@ -51,19 +53,22 @@ class EmailService:
         self,
         *,
         candidate: CandidateAggregate,
+        reviewer_email: str | None,
+        reviewer_name: str | None,
         scheduled_at: datetime,
         interview_type: str,
         location_or_link: str | None,
         notes: str | None,
         updated: bool = False,
     ) -> None:
-        """Notify a candidate that an interview has been scheduled or updated."""
+        """Notify the candidate and assigned reviewer about an interview."""
         if not self._is_enabled():
             return
 
         when = scheduled_at.strftime("%A, %B %d, %Y at %I:%M %p UTC")
-        subject = interview_email_subject(candidate.name, updated=updated)
-        html = interview_email_body(
+
+        candidate_subject = interview_email_subject(candidate.name, updated=updated)
+        candidate_html = interview_email_body(
             candidate_name=candidate.name,
             role_applied=candidate.role_applied,
             scheduled_at=when,
@@ -72,7 +77,22 @@ class EmailService:
             notes=notes,
             updated=updated,
         )
-        await self._send_safe(candidate.email, subject, html)
+        await self._send_safe(candidate.email, candidate_subject, candidate_html)
+
+        if reviewer_email:
+            reviewer_subject = reviewer_interview_email_subject(candidate.name, updated=updated)
+            reviewer_html = reviewer_interview_email_body(
+                reviewer_name=reviewer_name or reviewer_email.split("@")[0],
+                candidate_name=candidate.name,
+                candidate_email=candidate.email,
+                role_applied=candidate.role_applied,
+                scheduled_at=when,
+                interview_type=interview_type,
+                location_or_link=location_or_link,
+                notes=notes,
+                updated=updated,
+            )
+            await self._send_safe(reviewer_email, reviewer_subject, reviewer_html)
 
     def _is_enabled(self) -> bool:
         """Return True when outbound email is configured."""

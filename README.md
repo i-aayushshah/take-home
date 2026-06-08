@@ -39,15 +39,7 @@ docker compose exec backend uv run python -m seed
 | PostgreSQL | localhost:5432 |
 | Redis | localhost:6379 |
 
-### Demo accounts (seeded)
-
-| Role | Email | Password | Can do |
-|---|---|---|---|
-| **Admin** | `admin@techkraft.com` | `admin12345` | Hiring decisions, resume upload, internal notes, create/remove candidates |
-| **Reviewer** | `reviewer1@techkraft.com` | `reviewer12345` | Submit scores, view own scores, generate AI summaries |
-| **Reviewer** | `reviewer2@techkraft.com` | `reviewer12345` | Same as reviewer1 (test multi-reviewer isolation) |
-
-Register at `/api/v1/auth/register` always creates a **reviewer** — admin accounts are seeded only.
+Register at `/api/v1/auth/register` always creates a **reviewer**. Admin accounts are created via seed (local dev only) or directly in the database.
 
 Stop services:
 
@@ -228,6 +220,20 @@ Each feature (auth, candidates) is organized as domain → application → infra
 
 This project was a good exercise in wiring a full-stack recruitment workflow end-to-end — especially integrating the GitHub Models inference API (migrating from the deprecated Azure endpoint to `models.github.ai`) and building a glass morphism UI with Tailwind v4 utility patterns and custom component classes.
 
+## Deploy to Azure (production)
+
+TechKraft runs on a small Azure VM. **GitHub Actions builds** Docker images on a powerful runner and pushes them to **ghcr.io**; the VM only **pulls and runs** prebuilt images (the VM is too small to build the frontend).
+
+| Artifact | Purpose |
+|---|---|
+| [`deployed_azure.md`](deployed_azure.md) | Step-by-step beginner guide (VM, secrets, first deploy, auto-deploy) |
+| [`deploy/setup-vm.sh`](deploy/setup-vm.sh) | One-time VM setup (Docker, swap) |
+| [`deploy/deploy.sh`](deploy/deploy.sh) | Pull images, migrate, restart (also run by GitHub Actions) |
+| [`docker-compose.prod.yml`](docker-compose.prod.yml) | Production compose (ghcr.io images, memory limits) |
+| [`.github/workflows/deploy-azure.yml`](.github/workflows/deploy-azure.yml) | Build + SSH deploy on push to `main` |
+
+Keep personal IPs, tokens, and checklists in `azure_deployed.md` (gitignored).
+
 ## Docker troubleshooting
 
 If `uv run` inside the backend container fails with `.venv` / `email_validator` errors, the host bind-mount was likely overwriting the Linux virtualenv (common on Windows). This project uses a named Docker volume for `/app/.venv` to avoid that. Recreate containers after pulling the fix:
@@ -243,7 +249,7 @@ docker compose exec backend uv run alembic upgrade head
 | Feature | Endpoint / route | Notes |
 |---|---|---|
 | Public apply | `POST /api/v1/applications`, `/apply` | No auth; rate-limited (5/min per IP); optional resume upload |
-| Email notifications | Hooked in `update_status` / auto-review | Set `EMAIL_ENABLED=true` + SMTP vars; logs when disabled |
+| Email notifications | Status changes + interview schedule/update | Notifies candidate and assigned reviewer; set `EMAIL_ENABLED=true` + SMTP vars |
 | Interview scheduling | `/api/v1/interviews`, `/interviews` | Admin calendar + per-candidate schedule panel |
 | Resume AI parse | `POST /api/v1/candidates/{id}/parse-resume` | PDF only; mock or GitHub Models; review before save |
 | Audit log | `GET /api/v1/candidates/{id}/audit` | Admin Activity tab on candidate detail |
@@ -268,7 +274,7 @@ SMTP_PASSWORD=...
 
 - SSE uses in-memory queues (not Redis pub/sub) — fine for dev, not multi-instance production
 - Rate limiter uses a fixed Redis window, not a sliding-window Lua script
-- Docker frontend runs the Vite dev server, not a production nginx static build
+- Local Docker Compose runs the Vite dev server; production uses `docker-compose.prod.yml` + nginx (see `deployed_azure.md`)
 - Skill filter uses JSON `contains` — behavior is PostgreSQL-specific
 
 ## Assignment requirements checklist
