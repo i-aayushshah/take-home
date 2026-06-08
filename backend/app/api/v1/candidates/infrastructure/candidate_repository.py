@@ -1,6 +1,6 @@
 """SQLAlchemy implementation of the candidate repository."""
 
-from datetime import UTC, datetime
+from app.shared.time import utc_now
 
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -64,7 +64,7 @@ class CandidateRepository(AbstractRepository[CandidateAggregate]):
         model = await self._session.get(CandidateModel, entity_id)
         if model is None or model.deleted_at is not None:
             return
-        model.deleted_at = datetime.now(UTC)
+        model.deleted_at = utc_now()
         await self._session.flush()
 
     async def update_ai_summary(self, entity_id: str, summary: str) -> CandidateAggregate | None:

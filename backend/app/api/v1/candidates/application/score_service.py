@@ -1,7 +1,7 @@
 """Score submission use-case service."""
 
 import uuid
-from datetime import UTC, datetime
+from app.shared.time import utc_now
 
 from app.api.v1.candidates.domain.exceptions import CandidateNotFoundError
 from app.api.v1.candidates.domain.score import ScoreEntity, create_score_entity
@@ -47,7 +47,7 @@ class ScoreService:
             score=score,
             reviewer_id=reviewer_id,
             note=note,
-            created_at=datetime.now(UTC),
+            created_at=utc_now(),
         )
         saved = await self._uow.scores.save(entity)
         await self._uow.commit()

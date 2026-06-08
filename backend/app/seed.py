@@ -1,7 +1,7 @@
 """Startup seed data for local development and demos."""
 
 import uuid
-from datetime import UTC, datetime
+from app.shared.time import utc_now
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,7 +43,7 @@ async def _seed_admin_user(session: AsyncSession) -> None:
 
 async def _seed_candidates(session: AsyncSession) -> None:
     """Create demo candidates with varied filters for list testing."""
-    now = datetime.now(UTC)
+    now = utc_now()
     candidates = [
         CandidateModel(
             id=str(uuid.uuid4()),
@@ -102,3 +102,26 @@ async def _seed_candidates(session: AsyncSession) -> None:
         ),
     ]
     session.add_all(candidates)
+
+
+async def run_seed() -> None:
+    """Run database seeding as a standalone CLI task."""
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+    from app.config import get_settings
+    settings = get_settings()
+    engine = create_async_engine(settings.database_url, echo=False)
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        await seed_database(session)
+    await engine.dispose()
+
+
+def main() -> None:
+    """Entry point for manual seed execution."""
+    import asyncio
+    asyncio.run(run_seed())
+    print("Seed complete (skipped if candidates already exist).")
+
+
+if __name__ == "__main__":
+    main()
